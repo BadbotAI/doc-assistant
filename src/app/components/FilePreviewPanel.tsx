@@ -219,7 +219,6 @@ function DocSwitcher({
                     <FIcon className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-[12px] font-medium truncate max-w-[140px]">{file.name}</span>
-                  {isActive && <span className="ml-auto text-[10px] text-primary">当前</span>}
                 </button>
               );
             })}
@@ -239,44 +238,37 @@ function ComparisonView({ files, onClose, onOpenFileManager }: { files: PreviewF
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Compact header */}
+      {/* Header */}
       <div className="flex items-center justify-between border-b border-stone-100 px-3 min-h-[42px]">
         <div className="flex items-center gap-2">
-          <Columns2 className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
-          <span className="text-[12px] font-medium text-stone-600">文档对比</span>
-          <div className="flex items-center gap-1 text-[12px] text-stone-400 ml-1">
-            <span className="flex items-center gap-0.5 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />新增</span>
-            <span className="flex items-center gap-0.5 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-400" />删除</span>
-            <span className="flex items-center gap-0.5 text-violet-600"><span className="w-1.5 h-1.5 rounded-full bg-violet-400" />变更</span>
+          <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(leftFile.type, true)}`}>
+            <LeftIcon className="w-3.5 h-3.5" />
           </div>
+          <span className="text-[12px] font-medium text-stone-600 truncate max-w-[100px]">{leftFile.name}</span>
+          <Columns2 className="w-3.5 h-3.5 text-stone-300 flex-shrink-0" />
+          <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(rightFile.type, true)}`}>
+            <RightIcon className="w-3.5 h-3.5" />
+          </div>
+          <span className="text-[12px] font-medium text-stone-600 truncate max-w-[100px]">{rightFile.name}</span>
         </div>
-        <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors" title="关闭">
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 text-[11px] text-stone-400">
+            <span className="flex items-center gap-1 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />新增</span>
+            <span className="flex items-center gap-1 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-400" />删除</span>
+            <span className="flex items-center gap-1 text-violet-600"><span className="w-1.5 h-1.5 rounded-full bg-violet-400" />变更</span>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors" title="关闭">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
-      {/* Side by side documents */}
+      {/* Side by side documents — independent scrolling */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left document */}
-        <div className="flex-1 flex flex-col min-w-0 border-r border-stone-100">
-          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-stone-50 bg-stone-50/40">
-            <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(leftFile.type, true)}`}>
-              <LeftIcon className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[12px] font-medium text-stone-600 truncate">{leftFile.name}</span>
-            <span className="text-[12px] text-stone-400 flex-shrink-0">原文档</span>
-          </div>
+        <div className="flex-1 min-w-0 overflow-auto border-r border-stone-100">
           <DocumentPreview key={leftFile.id} fileName={leftFile.name} fileType={leftFile.type} previewContent={leftFile.previewContent} annotations={leftFile.annotations} hideHeader />
         </div>
-        {/* Right document */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex items-center gap-1.5 px-3 py-2 border-b border-stone-50 bg-stone-50/40">
-            <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(rightFile.type, true)}`}>
-              <RightIcon className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-[12px] font-medium text-stone-600 truncate">{rightFile.name}</span>
-            <span className="text-[12px] text-stone-400 flex-shrink-0">对比文档</span>
-          </div>
+        <div className="flex-1 min-w-0 overflow-auto">
           <DocumentPreview key={rightFile.id} fileName={rightFile.name} fileType={rightFile.type} previewContent={rightFile.previewContent} annotations={rightFile.annotations} hideHeader />
         </div>
       </div>

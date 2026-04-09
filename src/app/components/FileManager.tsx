@@ -741,7 +741,7 @@ redis:
               <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" />{folder.fileCount}</span><span className="text-border">·</span><span>{formatFolderDate(folder.lastModified)}</span>
             </p>
           </div>
-          <div className="w-7 h-7 rounded-lg bg-white/60 group-hover:bg-primary/10 flex items-center justify-center flex-shrink-0 transition-colors"
+          <div className="w-7 h-7 rounded-lg bg-white border border-border/60 shadow-sm group-hover:bg-primary/10 group-hover:border-primary/20 flex items-center justify-center flex-shrink-0 transition-colors"
             onClick={(e) => { e.stopPropagation(); if (onSelectConversation) { onSelectConversation(folder.conversationId); onBack(); } }}
             title="进入对话">
             <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -760,8 +760,8 @@ redis:
             );
           })}
           {remainingCount > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 h-[40px] bg-gradient-to-t from-white via-white/90 to-transparent flex items-end justify-center pb-2">
-              <span className="text-[12px] font-medium text-muted-foreground/60">+{remainingCount}</span>
+            <div className="absolute bottom-0 left-0 right-0 h-[44px] bg-gradient-to-t from-stone-100 via-stone-50 to-transparent flex items-end justify-center pb-2.5">
+              <span className="text-[11px] font-semibold text-stone-400">+{remainingCount}</span>
             </div>
           )}
         </div>

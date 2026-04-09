@@ -100,12 +100,7 @@ function AttachmentCard({ attachment, messageId, onDelete }: { attachment: Messa
       </div>
       {/* Info area */}
       <div className="px-2.5 py-2">
-        <p className="text-[12px] font-medium text-stone-700 truncate">{attachment.name}</p>
-        <div className="flex items-center gap-1 mt-0.5">
-          <span className="text-[12px] text-stone-400">{attachment.size}</span>
-          {isLoading && <span className="text-[12px] text-primary font-medium">...</span>}
-          {attachment.status === 'error' && <span className="text-[12px] text-red-500">失败</span>}
-        </div>
+        <p className="text-[12px] font-medium text-stone-700 truncate">{attachment.name.replace(/^.*[\\/]/, '')}</p>
       </div>
       {/* Loading bar */}
       {isLoading && (
@@ -261,8 +256,7 @@ export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment,
                               <Icon className={`w-6 h-6 ${colors.icon}`} />
                             </div>
                             <div className="px-2.5 py-2 bg-white">
-                              <p className="text-[12px] font-medium text-stone-700 truncate">{attachment.name}</p>
-                              <span className="text-[12px] text-stone-400">{attachment.size}</span>
+                              <p className="text-[12px] font-medium text-stone-700 truncate">{attachment.name.replace(/^.*[\\/]/, '')}</p>
                             </div>
                           </div>
                         );

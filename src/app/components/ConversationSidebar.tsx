@@ -299,7 +299,7 @@ export function ConversationSidebar({
               <Home className="w-[18px] h-[18px]" />
             </button>
           ) : (
-            <span className="text-[17px] font-semibold text-white tracking-tight pl-[5px] whitespace-nowrap" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+            <span className="text-[17px] font-semibold text-white tracking-tight pl-[15px] whitespace-nowrap" style={{ fontFamily: "'Noto Serif SC', serif" }}>
               通用文档助手
             </span>
           )}

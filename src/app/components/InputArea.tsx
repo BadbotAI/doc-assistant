@@ -156,10 +156,9 @@ export const InputArea = forwardRef<InputAreaRef, InputAreaProps>(
                         {isUploading ? <Loader2 className={`w-6 h-6 ${colors.icon} animate-spin`} /> : <Icon className={`w-6 h-6 ${colors.icon}`} />}
                       </div>
                       <div className="px-2.5 py-2 bg-transparent">
-                        <p className="text-[12px] font-medium text-stone-700 truncate">{att.name}</p>
-                        <span className={`text-[12px] ${isUploading ? 'text-primary' : att.status === 'ready' ? 'text-stone-400' : 'text-red-500'}`}>
-                          {isUploading ? '上传中...' : att.status === 'ready' ? att.type.toUpperCase() : '失败'}
-                        </span>
+                        <p className="text-[12px] font-medium text-stone-700 truncate">{att.name.replace(/^.*[\\/]/, '')}</p>
+                        {isUploading && <span className="text-[12px] text-primary">上传中...</span>}
+                        {att.status === 'error' && <span className="text-[12px] text-red-500">失败</span>}
                       </div>
                       {att.status === 'ready' && (
                         <button className="absolute top-1.5 right-1.5 w-5 h-5 rounded-md flex items-center justify-center bg-white/80 text-stone-300 hover:text-stone-500 opacity-0 group-hover/chip:opacity-100 transition-all" onClick={() => handleDeletePendingAttachment(att.id)}>
@@ -182,7 +181,16 @@ export const InputArea = forwardRef<InputAreaRef, InputAreaProps>(
                   return (
                     <button
                       key={index}
-                      onClick={() => handlePresetQueryClick(query)}
+                      onClick={() => {
+                        if (isSpecialMode) {
+                          const readyAttachments = pendingAttachments.filter(a => a.status === 'ready');
+                          onSendMessage(query, defaultAgentType || 'business', readyAttachments.length > 0 ? readyAttachments : undefined);
+                          setMessage('');
+                          setPendingAttachments([]);
+                        } else {
+                          handlePresetQueryClick(query);
+                        }
+                      }}
                       className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] whitespace-nowrap transition-all duration-150 cursor-pointer active:scale-[0.97] flex-shrink-0 ${
                         isSpecialMode
                           ? 'bg-primary/8 hover:bg-primary/14 text-primary'
