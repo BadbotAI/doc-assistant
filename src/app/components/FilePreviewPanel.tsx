@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { X, FileText, FileSpreadsheet, File, Image, Braces, FileCode, Database, Columns2, FolderOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Download, PanelLeftClose, PanelLeft, List, LayoutGrid, ChevronDown } from 'lucide-react';
+import { X, FileText, FileSpreadsheet, File, Image, Braces, FileCode, Database, FolderOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Download, PanelLeftClose, PanelLeft, List, LayoutGrid, ChevronDown } from 'lucide-react';
 import { DocumentPreview } from '@/app/components/DocumentPreview';
 import type { DocumentAnnotation } from '@/app/components/DocumentPreview';
 
@@ -238,38 +238,43 @@ function ComparisonView({ files, onClose, onOpenFileManager }: { files: PreviewF
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Header */}
+      {/* Toolbar — legend + close */}
       <div className="flex items-center justify-between border-b border-stone-100 px-3 min-h-[42px]">
-        <div className="flex items-center gap-2">
-          <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(leftFile.type, true)}`}>
-            <LeftIcon className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-[12px] font-medium text-stone-600 truncate max-w-[100px]">{leftFile.name}</span>
-          <Columns2 className="w-3.5 h-3.5 text-stone-300 flex-shrink-0" />
-          <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(rightFile.type, true)}`}>
-            <RightIcon className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-[12px] font-medium text-stone-600 truncate max-w-[100px]">{rightFile.name}</span>
+        <div className="flex items-center gap-2.5 text-[11px] text-stone-400">
+          <span className="flex items-center gap-1 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />新增</span>
+          <span className="flex items-center gap-1 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-400" />删除</span>
+          <span className="flex items-center gap-1 text-violet-600"><span className="w-1.5 h-1.5 rounded-full bg-violet-400" />变更</span>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5 text-[11px] text-stone-400">
-            <span className="flex items-center gap-1 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />新增</span>
-            <span className="flex items-center gap-1 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-400" />删除</span>
-            <span className="flex items-center gap-1 text-violet-600"><span className="w-1.5 h-1.5 rounded-full bg-violet-400" />变更</span>
-          </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors" title="关闭">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors" title="关闭">
+          <X className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* Side by side documents — independent scrolling */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 min-w-0 overflow-auto border-r border-stone-100">
-          <DocumentPreview key={leftFile.id} fileName={leftFile.name} fileType={leftFile.type} previewContent={leftFile.previewContent} annotations={leftFile.annotations} hideHeader />
+        {/* Left pane */}
+        <div className="flex-1 min-w-0 flex flex-col border-r border-stone-100">
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-stone-50 bg-stone-50/50 flex-shrink-0">
+            <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(leftFile.type, true)}`}>
+              <LeftIcon className="w-3 h-3" />
+            </div>
+            <span className="text-[12px] font-medium text-stone-600 truncate">{leftFile.name}</span>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <DocumentPreview key={leftFile.id} fileName={leftFile.name} fileType={leftFile.type} previewContent={leftFile.previewContent} annotations={leftFile.annotations} hideHeader />
+          </div>
         </div>
-        <div className="flex-1 min-w-0 overflow-auto">
-          <DocumentPreview key={rightFile.id} fileName={rightFile.name} fileType={rightFile.type} previewContent={rightFile.previewContent} annotations={rightFile.annotations} hideHeader />
+        {/* Right pane */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-stone-50 bg-stone-50/50 flex-shrink-0">
+            <div className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 ${getTabColor(rightFile.type, true)}`}>
+              <RightIcon className="w-3 h-3" />
+            </div>
+            <span className="text-[12px] font-medium text-stone-600 truncate">{rightFile.name}</span>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <DocumentPreview key={rightFile.id} fileName={rightFile.name} fileType={rightFile.type} previewContent={rightFile.previewContent} annotations={rightFile.annotations} hideHeader />
+          </div>
         </div>
       </div>
     </div>

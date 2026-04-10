@@ -612,8 +612,8 @@ export function DocumentPreview({
         </div>
       )}
 
-      {/* Summary bar */}
-      {annotationSummary}
+      {/* Summary bar — hidden in comparison mode (hideHeader) since parent already shows legend */}
+      {!hideHeader && annotationSummary}
 
       {/* Main content area: document (+ optional sidebar) */}
       <div className="flex-1 flex overflow-hidden">

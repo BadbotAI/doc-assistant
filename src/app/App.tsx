@@ -2,7 +2,6 @@ import { useState, useRef } from 'react';
 import { ConversationSidebar } from '@/app/components/ConversationSidebar';
 import { MessageStream } from '@/app/components/MessageStream';
 import type { Message, CapabilityCard, MessageAttachment, ParsingState } from '@/app/components/MessageStream';
-import { DocumentContext } from '@/app/components/DocumentContext';
 import type { Document } from '@/app/components/DocumentContext';
 import { InputArea } from '@/app/components/InputArea';
 import type { AgentType, InputAreaRef } from '@/app/components/InputArea';
@@ -238,17 +237,30 @@ function generateMockPreviewContent(fileName: string, mimeType: string): any {
       title: baseName,
       sections: [
         { type: 'heading', content: '一、概述' },
-        { type: 'text', content: `本文档"${baseName}"包含详细的业务分析数据和关键指标信息。以下为主要内容摘要。` },
+        { type: 'text', content: `本文档"${baseName}"包含详细的业务分析数据和关键指标信息。以下为主要内容摘要，数据采集周期为2024年10月至12月。` },
         { type: 'heading', content: '二、核心内容' },
         { type: 'text', content: '根据最新数据统计，本季度各项指标表现稳定，主要业务线均保持正增长态势。其中核心业务收入占比保持在85%以上，显示出良好的业务结构稳定性。' },
+        { type: 'subheading', content: '2.1 关键财务指标' },
         { type: 'table', content: [
           ['指标', '本期', '上期', '变动'],
           ['营业收入', '8,560万', '7,420万', '+15.3%'],
           ['净利润', '2,150万', '1,905万', '+12.8%'],
           ['毛利率', '38.9%', '36.2%', '+2.7pp'],
+          ['经营现金流', '2,010万', '1,750万', '+14.9%'],
         ]},
-        { type: 'heading', content: '三、总结与建议' },
+        { type: 'subheading', content: '2.2 业务板块拆分' },
+        { type: 'text', content: '核心业务持续保持行业领先地位，本季度收入5,820万，占总收入68.0%。拓展业务增长强劲，同比增幅22.5%，收入达1,450万。服务收入保持稳定增长态势，同比+8.3%。' },
+        { type: 'heading', content: '三、运营分析' },
+        { type: 'text', content: '运营效率整体保持在行业前列。人均产出同比提升7.2%，单位获客成本同比下降9.8%。客户留存率维持在82.1%的较高水平，客户满意度评分4.3/5.0。' },
+        { type: 'list', content: [
+          '人均产出：26.8万/人/季（同比+7.2%）',
+          '获客成本：3,120元/人（同比-9.8%）',
+          '客户留存率：82.1%',
+          '活跃客户数：10,720（+14.5%）',
+        ]},
+        { type: 'heading', content: '四、总结与建议' },
         { type: 'text', content: '综合以上分析，当前整体运营状况良好。建议继续保持现有业务优势，同时关注新兴市场机会，优化资源配置效率。' },
+        { type: 'text', content: '下一步重点工作：（1）推进核心业务的精细化运营；（2）加快拓展业务在二三线城市的布局；（3）持续优化成本结构，提升整体利润率水平。' },
       ]
     };
   }
@@ -265,8 +277,20 @@ function generateMockPreviewContent(fileName: string, mimeType: string): any {
           '跨部门协作机制与接口规范',
           '异常处理流程与应急预案',
         ]},
+        { type: 'subheading', content: '2.1 质量控制措施' },
+        { type: 'text', content: '质量管理采用分级管控策略：A级事项实行实时监控，发现异常60分钟内响应；B级事项每日巡检，发现问题8小时内处理；C级事项按周汇总复核。' },
+        { type: 'subheading', content: '2.2 跨部门协作' },
+        { type: 'text', content: '各部门间通过内部工单系统进行协作，需求方提交申请后，供给方应在3个工作日内完成响应。紧急事项走快速通道，2小时内响应。' },
         { type: 'heading', content: '3. 实施计划' },
         { type: 'text', content: '建议按照三个阶段实施：准备阶段（2周）、试运行阶段（4周）、正式运行阶段（持续优化）。各阶段需要明确负责人和交付物。' },
+        { type: 'table', content: [
+          ['阶段', '时长', '关键产出', '负责人'],
+          ['准备阶段', '2周', '需求文档+技术方案', '产品部'],
+          ['试运行', '4周', '测试报告+优化清单', '运营部'],
+          ['正式运行', '持续', '月度运营报告', '运营部'],
+        ]},
+        { type: 'heading', content: '4. 变更记录' },
+        { type: 'text', content: '上一次修订为2024年9月，主要更新了异常处理流程和跨部门协作时效要求。' },
       ]
     };
   }
@@ -286,9 +310,8 @@ function generateMockPreviewContent(fileName: string, mimeType: string): any {
     };
   }
   if (mimeType.includes('image')) {
-    return null; // 图片不需要文本预览
+    return null;
   }
-  // 默认用PDF风格
   return {
     title: baseName,
     sections: [
@@ -519,16 +542,23 @@ function generateComparisonAnnotations(fileType: string, previewContent: any, si
         {
           sectionIndex: 1,
           riskLevel: 'diff-changed' as const,
-          title: '内容表述差异',
-          comment: '此段描述与对比文档存在差异。本文档使用了更详细的业务数据描述，而对比文档则侧重于趋势分析。',
+          title: '概述表述差异',
+          comment: '概述部分的描述角度不同 -- 本文档侧重数据采集说明，对比文档侧重战略定位。',
           highlightText: previewContent.sections[1]?.content?.slice(0, 20),
         },
         {
           sectionIndex: 3,
-          riskLevel: 'diff-removed' as const,
-          title: '对比文档中无此段',
-          comment: '此核心内容段落仅出现在本文档中，对比文档缺少对应的详细数据分析。建议确认是否需要在两份文档中保持一致。',
+          riskLevel: 'diff-changed' as const,
+          title: '核心数据差异',
+          comment: '核心业务描述的数据口径不同。本文档强调结构稳定性，对比文档强调增速变化。',
           highlightText: previewContent.sections[3]?.content?.slice(0, 25),
+        },
+        {
+          sectionIndex: 8,
+          riskLevel: 'diff-removed' as const,
+          title: '运营数据差异',
+          comment: '本文档的运营指标（人均产出26.8万、获客成本3,120元）与对比文档（28.6万、2,850元）存在差异，需确认数据来源。',
+          highlightText: previewContent.sections[8]?.content?.slice(0, 20),
         },
       ];
     } else {
@@ -536,15 +566,29 @@ function generateComparisonAnnotations(fileType: string, previewContent: any, si
         {
           sectionIndex: 1,
           riskLevel: 'diff-changed' as const,
-          title: '内容表述差异',
-          comment: '此段描述与对比文档存在差异。本文档侧重趋势分析，而对比文档使用了更详细的业务数据描述。',
+          title: '概述表述差异',
+          comment: '概述部分的描述角度不同 -- 本文档侧重战略定位，对比文档侧重数据采集说明。',
           highlightText: previewContent.sections[1]?.content?.slice(0, 20),
+        },
+        {
+          sectionIndex: 8,
+          riskLevel: 'diff-changed' as const,
+          title: '运营数据差异',
+          comment: '运营指标数据与对比文档存在差异，本文档数据更新，建议以本文档为准。',
+          highlightText: previewContent.sections[8]?.content?.slice(0, 20),
+        },
+        {
+          sectionIndex: 10,
+          riskLevel: 'diff-added' as const,
+          title: '新增风险章节',
+          comment: '本文档独有"风险与挑战"章节，对比文档中未包含。建议评估是否需要补充到对比文档。',
+          highlightText: previewContent.sections[10]?.content?.slice(0, 20),
         },
         {
           sectionIndex: previewContent.sections.length - 1,
           riskLevel: 'diff-added' as const,
-          title: '本文档新增内容',
-          comment: '此结论段落为本文档独有，对比文档中未包含类似的总结性陈述。建议评估是否需要补充到对比文档。',
+          title: '新增具体措施',
+          comment: '本文档在战略展望后新增了具体执行措施清单，比对比文档更加完整。',
           highlightText: previewContent.sections[previewContent.sections.length - 1]?.content?.slice(0, 20),
         },
       ];
@@ -576,17 +620,32 @@ function generateVariantPreviewContent(fileName: string, mimeType: string): any 
       title: baseName,
       sections: [
         { type: 'heading', content: '一、概述' },
-        { type: 'text', content: `本文档"${baseName}"聚焦业务发展趋势和战略规划，以下为关键数据和分析结论。` },
-        { type: 'heading', content: '二、核心内容' },
+        { type: 'text', content: `本文档"${baseName}"聚焦业务发展趋势和战略规划，以下为关键数据和分析结论。报告期为2024年第四季度，数据覆盖全部业务板块。` },
+        { type: 'heading', content: '二、业绩综述' },
         { type: 'text', content: '本季度整体业绩呈上升趋势，各业务板块均实现正增长。核心业务增速放缓至12%，但拓展业务保持高速增长，同比增幅达到22.5%，成为新的增长引擎。' },
+        { type: 'subheading', content: '2.1 关键财务指标' },
         { type: 'table', content: [
           ['指标', '本期', '上期', '变动'],
           ['营业收入', '8,280万', '7,150万', '+15.8%'],
           ['净利润', '2,080万', '1,830万', '+13.7%'],
           ['毛利率', '37.5%', '35.8%', '+1.7pp'],
+          ['经营现金流', '1,920万', '1,680万', '+14.3%'],
         ]},
-        { type: 'heading', content: '三、战略展望' },
+        { type: 'subheading', content: '2.2 业务板块拆分' },
+        { type: 'text', content: '拓展业务本季度贡献收入1,380万，占总收入16.7%，较上季度提升2.3个百分点。创新业务虽然体量较小（480万），但同比增速达到45.2%，预计下一季度将突破600万规模。' },
+        { type: 'heading', content: '三、运营分析' },
+        { type: 'text', content: '运营效率方面，人均产出同比提升8.6%，单位获客成本下降12.3%。客户留存率从82.1%提升至85.7%，主要得益于新推出的会员服务体系和精细化运营策略。' },
+        { type: 'list', content: [
+          '人均产出：28.6万/人/季（同比+8.6%）',
+          '获客成本：2,850元/人（同比-12.3%）',
+          '客户留存率：85.7%（+3.6pp）',
+          '活跃客户数：12,680（+18.2%）',
+        ]},
+        { type: 'heading', content: '四、风险与挑战' },
+        { type: 'text', content: '当前面临的主要风险包括：市场竞争加剧导致核心业务增速放缓；原材料成本波动影响毛利率稳定性；部分新兴市场的政策不确定性增大。' },
+        { type: 'heading', content: '五、战略展望' },
         { type: 'text', content: '展望下一阶段，建议加大对拓展业务的投入力度，同时完善风险管理体系。重点关注市场竞争态势变化和政策法规更新，确保业务可持续增长。' },
+        { type: 'text', content: '具体措施包括：（1）设立创新业务专项基金，预算不低于总收入的5%；（2）建立市场预警机制，提前应对行业政策变化；（3）推进数字化转型，年内完成核心业务系统升级。' },
       ]
     };
   }
@@ -595,7 +654,7 @@ function generateVariantPreviewContent(fileName: string, mimeType: string): any 
       title: baseName,
       sections: [
         { type: 'heading', content: '1. 文档概述' },
-        { type: 'text', content: `本文档"${baseName}"定义了业务运营的标准操作规程，适用于全体运营团队成员。` },
+        { type: 'text', content: `本文档"${baseName}"定义了业务运营的标准操作规程，适用于全体运营团队成员。本次修订重点更新了质量管理与监控体系章节。` },
         { type: 'heading', content: '2. 核心流程' },
         { type: 'list', content: [
           '业务流程标准化管理方案',
@@ -603,8 +662,20 @@ function generateVariantPreviewContent(fileName: string, mimeType: string): any 
           '跨部门数据共享协议',
           '应急响应与灾难恢复预案',
         ]},
+        { type: 'subheading', content: '2.1 质量管理体系（修订）' },
+        { type: 'text', content: '质量管理采用分级管控策略：A级事项实行实时监控，发现异常30分钟内响应；B级事项每日巡检，发现问题4小时内处理；C级事项按周汇总复核。' },
+        { type: 'subheading', content: '2.2 跨部门协作机制' },
+        { type: 'text', content: '各部门间建立标准化数据接口，通过统一的数据中台实现信息共享。需求方提交数据申请后，供给方应在2个工作日内完成响应。' },
         { type: 'heading', content: '3. 执行时间表' },
         { type: 'text', content: '分三个阶段推进：第一阶段（1个月）完成基础搭建，第二阶段（3个月）完成试运行和优化，第三阶段进入正式运营并建立持续改进机制。' },
+        { type: 'table', content: [
+          ['阶段', '时长', '关键产出', '负责人'],
+          ['基础搭建', '1个月', '系统部署+流程文档', '技术部'],
+          ['试运行', '3个月', '试运行报告+优化方案', '运营部'],
+          ['正式运营', '持续', '月度运营报告', '运营部'],
+        ]},
+        { type: 'heading', content: '4. 变更记录' },
+        { type: 'text', content: '本次修订主要变更：更新质量管理响应时效要求（A级从60分钟缩短至30分钟）；新增数据中台协作流程；调整试运行阶段时长（从2个月延长至3个月）。' },
       ]
     };
   }
@@ -643,6 +714,9 @@ export default function App() {
             role: 'user',
             content: '帮我分析一下2024年度财务报告',
             timestamp: '15:30',
+            attachments: [
+              { id: 'a-d1', name: '2024年度财务报告.pdf', type: 'application/pdf', size: '2.3 MB', status: 'ready' as const },
+            ],
           },
           {
             id: 'm2',
@@ -667,6 +741,10 @@ export default function App() {
             role: 'user',
             content: '请帮我审核这份产品需求文档的合规性',
             timestamp: '14:20',
+            attachments: [
+              { id: 'a-d2', name: '产品需求文档V2.1.docx', type: 'application/msword', size: '1.8 MB', status: 'ready' as const },
+              { id: 'a-d3', name: '竞品分析报告.pdf', type: 'application/pdf', size: '4.1 MB', status: 'ready' as const },
+            ],
           },
           {
             id: 'm4',
@@ -692,6 +770,9 @@ export default function App() {
             role: 'user',
             content: '帮我校验这个数据表中的数值',
             timestamp: '10:15',
+            attachments: [
+              { id: 'a-d4', name: '销售数据表Q4.xlsx', type: 'application/vnd.ms-excel', size: '890 KB', status: 'ready' as const },
+            ],
           },
           {
             id: 'm6',
@@ -1295,12 +1376,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Document Context */}
-            <DocumentContext
-              documents={activeConversation?.documents || []}
-              onDeleteDocument={handleDeleteDocument}
-            />
-
             {/* Message Stream */}
             <MessageStream
               messages={activeConversation?.messages || []}
@@ -1337,8 +1412,8 @@ export default function App() {
       ) : (
         <div className="flex-1 flex overflow-hidden relative">
           <div className={`flex flex-col overflow-hidden min-w-0 ${
-            filePreviewPanel?.activeFileId === '__comparison__'
-              ? 'w-[340px] min-w-[300px] flex-shrink-0'
+            filePreviewPanel
+              ? 'w-[340px] min-w-[280px] flex-shrink-0'
               : 'flex-1'
           }`}>
         {/* Welcome / Empty state */}
@@ -1386,9 +1461,9 @@ export default function App() {
         ) : (
           <>
             {/* Conversation Title + gradient fade */}
-            <div className={`${filePreviewPanel?.activeFileId === '__comparison__' ? 'px-4 pt-4' : 'px-6 pt-5'} flex-shrink-0 relative`}>
-              <div className={`${filePreviewPanel?.activeFileId === '__comparison__' ? 'max-w-none' : 'max-w-[880px]'} mx-auto pb-3`}>
-                <h1 className={`${filePreviewPanel?.activeFileId === '__comparison__' ? 'text-[15px]' : 'text-[18px]'} font-semibold text-foreground tracking-tight`} style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>
+            <div className={`${filePreviewPanel ? 'px-4 pt-4' : 'px-6 pt-5'} flex-shrink-0 relative`}>
+              <div className={`${filePreviewPanel ? 'max-w-none' : 'max-w-[880px]'} mx-auto pb-3`}>
+                <h1 className={`${filePreviewPanel ? 'text-[15px]' : 'text-[18px]'} font-semibold text-foreground tracking-tight`} style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>
                   {activeConversation?.title || '对话'}
                 </h1>
               </div>
@@ -1403,24 +1478,18 @@ export default function App() {
               onDeleteAttachment={handleDeleteAttachment}
               parsingState={parsingState}
               onSuggestionClick={handleSuggestionClick}
-              compact={filePreviewPanel?.activeFileId === '__comparison__'}
+              compact={!!filePreviewPanel}
             />
 
-            {/* Document Context + Input Area */}
+            {/* Input Area */}
             <div className="flex-shrink-0">
-              {filePreviewPanel?.activeFileId !== '__comparison__' && (
-                <DocumentContext
-                  documents={activeConversation?.documents || []}
-                  onDeleteDocument={handleDeleteDocument}
-                />
-              )}
               <InputArea
                 ref={inputAreaRef}
                 onSendMessage={handleSendMessage}
                 onUploadDocuments={handleUploadDocuments}
                 disabled={isProcessing}
                 defaultAgentType={activeAgentType}
-                isCompact={filePreviewPanel?.activeFileId === '__comparison__'}
+                isCompact={!!filePreviewPanel}
               />
             </div>
           </>
@@ -1429,11 +1498,7 @@ export default function App() {
 
           {/* File Preview Panel - right side when active */}
           {filePreviewPanel && (
-            <div className={`flex-shrink-0 border-l border-border ${
-              filePreviewPanel.activeFileId === '__comparison__'
-                ? 'flex-1 min-w-[520px]'
-                : 'w-[45%] min-w-[380px] max-w-[640px]'
-            }`}>
+            <div className="flex-1 min-w-[480px] border-l border-border">
               <FilePreviewPanel
                 files={filePreviewPanel.files}
                 activeFileId={filePreviewPanel.activeFileId}
