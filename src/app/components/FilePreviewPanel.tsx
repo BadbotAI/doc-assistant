@@ -238,8 +238,8 @@ function ComparisonView({ files, onClose, onOpenFileManager }: { files: PreviewF
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Toolbar — legend + close */}
-      <div className="flex items-center justify-between border-b border-stone-100 px-3 min-h-[42px]">
+      {/* Toolbar — legend on right + close */}
+      <div className="flex items-center justify-end border-b border-stone-100 px-3 min-h-[42px] gap-3">
         <div className="flex items-center gap-2.5 text-[11px] text-stone-400">
           <span className="flex items-center gap-1 text-emerald-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />新增</span>
           <span className="flex items-center gap-1 text-rose-600"><span className="w-1.5 h-1.5 rounded-full bg-rose-400" />删除</span>

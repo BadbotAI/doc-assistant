@@ -118,22 +118,6 @@ function AttachmentCard({ attachment, messageId, onDelete }: { attachment: Messa
   );
 }
 
-function getParsingFileIcon(type: string) {
-  if (type.includes('pdf')) return FileText;
-  if (type.includes('sheet') || type.includes('excel') || type.includes('csv')) return FileSpreadsheet;
-  if (type.includes('image') || type.includes('png') || type.includes('jpg')) return FileImage;
-  if (type.includes('word') || type.includes('doc')) return FileText;
-  return File;
-}
-
-function getParsingFileColor(type: string) {
-  if (type.includes('pdf')) return { bar: 'bg-red-500', bg: 'bg-red-50', icon: 'text-red-500' };
-  if (type.includes('sheet') || type.includes('excel') || type.includes('csv')) return { bar: 'bg-emerald-500', bg: 'bg-emerald-50', icon: 'text-emerald-500' };
-  if (type.includes('image') || type.includes('png') || type.includes('jpg')) return { bar: 'bg-purple-500', bg: 'bg-purple-50', icon: 'text-purple-500' };
-  if (type.includes('word') || type.includes('doc')) return { bar: 'bg-blue-500', bg: 'bg-blue-50', icon: 'text-blue-500' };
-  return { bar: 'bg-stone-500', bg: 'bg-stone-50', icon: 'text-stone-500' };
-}
-
 function ParsingIndicator({ parsingState }: { parsingState: ParsingState }) {
   return (
     <div className="max-w-none">
@@ -141,12 +125,12 @@ function ParsingIndicator({ parsingState }: { parsingState: ParsingState }) {
         <div className="text-[13px] text-slate-400 font-medium">文档助手</div>
         <div className="flex flex-wrap gap-2">
           {parsingState.files.map((file) => {
-            const Icon = getParsingFileIcon(file.type);
-            const colors = getParsingFileColor(file.type);
+            const Icon = getAttachmentIcon(file.type);
+            const colors = getAttachmentColor(file.type);
             const isDone = file.progress >= 100;
             return (
               <div key={file.id} className={`relative w-[110px] rounded-xl border overflow-hidden transition-colors duration-200 ${
-                isDone ? `bg-white ${colors.bg.replace('bg-', 'border-').replace('-50', '-100')} hover:shadow-sm` : `${colors.bg.replace('bg-', 'border-').replace('-50', '-100')} animate-pulse`
+                isDone ? `bg-white ${colors.border} hover:shadow-sm` : `${colors.border} animate-pulse`
               }`}>
                 <div className={`w-full h-[72px] ${colors.bg} flex items-center justify-center relative`}>
                   {isDone
@@ -155,7 +139,7 @@ function ParsingIndicator({ parsingState }: { parsingState: ParsingState }) {
                   }
                   {!isDone && (
                     <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/40">
-                      <div className={`h-full ${colors.bar} transition-all duration-700 ease-out`} style={{ width: `${file.progress}%` }} />
+                      <div className={`h-full ${colors.icon.replace('text-', 'bg-')} transition-all duration-700 ease-out`} style={{ width: `${file.progress}%` }} />
                     </div>
                   )}
                 </div>
