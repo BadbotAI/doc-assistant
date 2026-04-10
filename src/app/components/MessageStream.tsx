@@ -76,12 +76,8 @@ function getAttachmentIcon(type: string) {
   return File;
 }
 
-function getAttachmentColor(type: string) {
-  if (type.includes('pdf')) return { bg: 'bg-red-50', icon: 'text-red-500', border: 'border-red-100' };
-  if (type.includes('sheet') || type.includes('excel') || type.includes('csv')) return { bg: 'bg-emerald-50', icon: 'text-emerald-500', border: 'border-emerald-100' };
-  if (type.includes('image') || type.includes('png') || type.includes('jpg')) return { bg: 'bg-purple-50', icon: 'text-purple-500', border: 'border-purple-100' };
-  if (type.includes('word') || type.includes('doc')) return { bg: 'bg-blue-50', icon: 'text-blue-500', border: 'border-blue-100' };
-  return { bg: 'bg-stone-50', icon: 'text-stone-500', border: 'border-stone-100' };
+function getAttachmentColor(_type: string) {
+  return { bg: 'bg-primary/[0.06]', icon: 'text-primary', border: 'border-primary/15' };
 }
 
 function AttachmentCard({ attachment, messageId, onDelete }: { attachment: MessageAttachment; messageId: string; onDelete?: (messageId: string, attachmentId: string) => void }) {
