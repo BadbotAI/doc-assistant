@@ -861,6 +861,8 @@ export default function App() {
     // 关闭文件预览面板
     setFilePreviewPanel(null);
     setParsingState(null);
+    // 退出文件管理器
+    setShowFileManager(false);
     // 重置快捷标签
     setActiveQuickTag(null);
     // 强制刷新欢迎页（即使已在欢迎页）
