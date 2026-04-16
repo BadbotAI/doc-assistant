@@ -1226,6 +1226,16 @@ export default function App() {
               : c
           )
         );
+
+        // 自动打开文件预览器
+        const previewFile: PreviewFile = {
+          id: exportAttachment.id,
+          name: exportAttachment.name,
+          type: 'pdf',
+          previewContent: generateMockPreviewContent(exportFileName, 'application/pdf'),
+        };
+        setFilePreviewPanel({ files: [previewFile], activeFileId: previewFile.id });
+
         setIsProcessing(false);
         return;
       }
@@ -1615,6 +1625,15 @@ export default function App() {
               messages={activeConversation?.messages ?? []}
               onCapabilityClick={handleCapabilityClick}
               onDeleteAttachment={handleDeleteAttachment}
+              onOpenFile={(att) => {
+                const pf: PreviewFile = {
+                  id: att.id,
+                  name: att.name,
+                  type: att.type.includes('pdf') ? 'pdf' : att.type.includes('word') || att.type.includes('doc') ? 'docx' : 'pdf',
+                  previewContent: generateMockPreviewContent(att.name, att.type),
+                };
+                setFilePreviewPanel({ files: [pf], activeFileId: pf.id });
+              }}
               parsingState={parsingState}
               onSuggestionClick={handleSuggestionClick}
               compact={!!filePreviewPanel}

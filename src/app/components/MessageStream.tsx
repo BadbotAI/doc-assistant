@@ -1,4 +1,4 @@
-import { Sparkles, Copy, Check, FileText, File, FileSpreadsheet, FileImage, X, Loader2, CheckCircle2, ThumbsUp, ThumbsDown, RotateCcw, ArrowRight } from 'lucide-react';
+import { Sparkles, Copy, Check, FileText, File, FileSpreadsheet, FileImage, X, Loader2, CheckCircle2, ThumbsUp, ThumbsDown, RotateCcw, ArrowRight, Download } from 'lucide-react';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { useState, useEffect, useRef } from 'react';
 
@@ -46,6 +46,7 @@ interface MessageStreamProps {
   messages: Message[];
   onCapabilityClick?: (capability: CapabilityCard) => void;
   onDeleteAttachment?: (messageId: string, attachmentId: string) => void;
+  onOpenFile?: (attachment: MessageAttachment) => void;
   parsingState?: ParsingState | null;
   onSuggestionClick?: (query: string) => void;
   compact?: boolean;
@@ -168,7 +169,7 @@ function ParsingIndicator({ parsingState }: { parsingState: ParsingState }) {
   );
 }
 
-export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment, parsingState, onSuggestionClick, compact }: MessageStreamProps) {
+export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment, onOpenFile, parsingState, onSuggestionClick, compact }: MessageStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -257,6 +258,34 @@ export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment,
                 <div className="text-[14px] text-slate-700 whitespace-pre-wrap break-words leading-[1.8]">
                   {message.content}
                 </div>
+
+                {/* AI-generated file cards — horizontal bar style */}
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {message.attachments.map((attachment) => {
+                      const FileIcon = getAttachmentIcon(attachment.type);
+                      return (
+                        <button
+                          key={attachment.id}
+                          onClick={() => onOpenFile?.(attachment)}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-stone-200 bg-stone-50/50 hover:border-primary/30 hover:bg-primary/[0.03] transition-all group/file cursor-pointer text-left"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <FileIcon className="w-4.5 h-4.5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] font-medium text-foreground truncate">{attachment.name}</p>
+                            <p className="text-[11px] text-muted-foreground">{attachment.size}</p>
+                          </div>
+                          {attachment.isAiGenerated && (
+                            <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-violet-500 text-white rounded-md leading-none flex-shrink-0">AI</span>
+                          )}
+                          <Download className="w-4 h-4 text-stone-300 group-hover/file:text-primary transition-colors flex-shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Capability Cards */}
                 {message.capabilities && message.capabilities.length > 0 && (

@@ -774,7 +774,7 @@ redis:
                 </Button>
 
                 <Button variant="outline" size="sm" className={`rounded-lg text-xs ${isSelectionMode ? 'text-primary border-primary/30 bg-primary/5' : 'text-muted-foreground border-border'}`} onClick={() => isSelectionMode ? exitSelectionMode() : setIsSelectionMode(true)} title="批量管理">
-                  <CheckSquare className="w-3 h-3" />{!previewFile && <span className="ml-1">选择文件创建新对话</span>}
+                  <CheckSquare className="w-3 h-3" />{!previewFile && <span className="ml-1">从文件创建对话</span>}
                 </Button>
               </div>
             </div>
