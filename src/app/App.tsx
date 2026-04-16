@@ -859,6 +859,43 @@ export default function App() {
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
 
+  /** Simulate streaming output: add message first with empty content, then reveal char by char */
+  const streamResponse = (convId: string, fullContent: string, extras?: Partial<Message>) => {
+    const msgId = generateId();
+    // Add message with empty content
+    const msg: Message = {
+      id: msgId,
+      role: 'assistant',
+      content: '',
+      timestamp: formatTime(),
+      agentType: '通用文档助手',
+      ...extras,
+    };
+    setConversations(prev => prev.map(c => c.id === convId ? { ...c, messages: [...c.messages, msg] } : c));
+    setThinkingStatus(null);
+
+    // Stream characters
+    let i = 0;
+    const charsPerTick = 3;
+    const interval = setInterval(() => {
+      i += charsPerTick;
+      if (i >= fullContent.length) {
+        // Done — set final content with followUpSuggestions
+        setConversations(prev => prev.map(c => {
+          if (c.id !== convId) return c;
+          return { ...c, messages: c.messages.map(m => m.id === msgId ? { ...m, content: fullContent, followUpSuggestions: extras?.followUpSuggestions || generateFollowUpSuggestions(fullContent, '通用文档助手') } : m) };
+        }));
+        setIsProcessing(false);
+        clearInterval(interval);
+      } else {
+        setConversations(prev => prev.map(c => {
+          if (c.id !== convId) return c;
+          return { ...c, messages: c.messages.map(m => m.id === msgId ? { ...m, content: fullContent.slice(0, i) } : m) };
+        }));
+      }
+    }, 30);
+  };
+
   const handleNewConversation = () => {
     // 重置退出文档模式标志
     setHasExitedDocumentMode(false);
@@ -1013,32 +1050,41 @@ export default function App() {
       // 启动解析动画
       setParsingState({ files: parsingFiles, stage: '正在解析文件结构...', isComplete: false });
 
-      // Stage 1: 0 → 30%
+      // Stage 1: 0 → 25%
       setTimeout(() => {
         setParsingState(prev => prev ? {
           ...prev,
-          files: prev.files.map(f => ({ ...f, progress: 30 })),
+          files: prev.files.map(f => ({ ...f, progress: 25 })),
           stage: '提取文本内容...',
         } : null);
-      }, 800);
+      }, 1200);
 
-      // Stage 2: 30 → 65%
+      // Stage 2: 25 → 50%
       setTimeout(() => {
         setParsingState(prev => prev ? {
           ...prev,
-          files: prev.files.map(f => ({ ...f, progress: 65 })),
+          files: prev.files.map(f => ({ ...f, progress: 50 })),
+          stage: '识别文档结构...',
+        } : null);
+      }, 2400);
+
+      // Stage 3: 50 → 80%
+      setTimeout(() => {
+        setParsingState(prev => prev ? {
+          ...prev,
+          files: prev.files.map(f => ({ ...f, progress: 80 })),
           stage: '构建分析索引...',
         } : null);
-      }, 1600);
+      }, 3800);
 
-      // Stage 3: 65 → 95%
+      // Stage 4: 80 → 95%
       setTimeout(() => {
         setParsingState(prev => prev ? {
           ...prev,
           files: prev.files.map(f => ({ ...f, progress: 95 })),
           stage: '完成分析准备...',
         } : null);
-      }, 2400);
+      }, 5000);
 
       // Complete: 100%
       setTimeout(() => {
@@ -1048,11 +1094,12 @@ export default function App() {
           stage: '解析完成',
           isComplete: true,
         } : null);
-      }, 2800);
+      }, 5800);
 
-      // Final: clear parsing, open preview panel, add AI response
+      // After parsing complete: clear parsing state, show thinking, then stream response
       setTimeout(() => {
         setParsingState(null);
+        setThinkingStatus('思考中...');
 
         // Build preview files
         const previewFiles: PreviewFile[] = attachments.map(att => ({
@@ -1087,12 +1134,11 @@ export default function App() {
           activeFileId: isComparison ? '__comparison__' : previewFiles[0].id,
         });
 
-        // Add AI response
+        // Build response text
         let docResponse: string;
         if (isComparison) {
           docResponse = `文档对比分析已完成，我已在右侧预览面板中并排展示两份文档，并用颜色标注了所有差异点。\n\n**差异概览**\n- 新增内容：对比文档中新增的段落或数据\n- 已删除：仅原文档包含的内容\n- 内容变更：两份文档中表述不同的部分\n\n**主要发现**\n1. **概述部分**：两份文档的描述角度不同 -- 原文档侧重数据，对比文档侧重趋势\n2. **核心数据**：营业收入差异 280万（8,560万 vs 8,280万），毛利率差异 1.4pp\n3. **结论部分**：原文档偏向现状描述，对比文档增加了战略展望\n\n建议重点关注数据差异部分，确认哪份文档的数据更准确。`;
         } else if (isReview) {
-          // 生成审核报告摘要
           const allAnnotations = new Map<string, DocumentAnnotation[]>();
           previewFiles.forEach(f => allAnnotations.set(f.id, f.annotations || []));
           docResponse = generateReviewSummaryResponse(previewFiles, allAnnotations);
@@ -1100,68 +1146,33 @@ export default function App() {
           docResponse = `我已完成对${attachments.length > 1 ? '这些' : '该'}文档的解析。以下是分析结果：\n\n**文档概览**\n${attachments.map(a => `- ${a.name}（${a.size}）`).join('\n')}\n\n**初步分析**\n文档内容已成功提取和索引。我可以为您进行以下操作：\n\n1. **内容摘要** -- 快速了解文档核心内容\n2. **关键数据提取** -- 提取重要数据和指标\n3. **深度分析** -- 对特定主题进行深入解读\n4. **问答交互** -- 基于文档内容回答问题\n\n请告诉我您想从哪个方向开始？您也可以在左侧预览面板中查看文档原文。`;
         }
 
-        const assistantMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          content: docResponse,
-          timestamp: formatTime(),
-          agentType: '通用文档助手',
-          followUpSuggestions: generateFollowUpSuggestions(docResponse, '通用文档助手'),
-        };
-
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === convId
-              ? { ...c, messages: [...c.messages, assistantMessage] }
-              : c
-          )
-        );
-        setThinkingStatus(null);
-        setIsProcessing(false);
-      }, 3200);
+        // 思考 2s 后开始流式输出
+        setTimeout(() => {
+          streamResponse(convId, docResponse);
+        }, 2000);
+      }, 6500);
 
       return; // 文件流程已处理，跳过默认的AI响应
     }
 
     // === 普通消息流程 ===
     // 思考中 → 生成回复中
-    const thinkDelay = 600 + Math.random() * 400;
-    setTimeout(() => setThinkingStatus('生成回复中...'), thinkDelay);
+    setTimeout(() => setThinkingStatus('生成回复中...'), 1500);
 
-    // 模拟AI处理延迟
+    // 模拟AI处理延迟 (3-4秒思考后开始流式输出)
     setTimeout(() => {
-      setThinkingStatus(null);
       // === 审核请求检测：当预览面板已打开时 ===
       if (isReviewRequest(message) && filePreviewPanel) {
         const updatedFiles = filePreviewPanel.files.map(file => {
           const annotations = generateReviewAnnotations(file.type, file.previewContent);
           return { ...file, annotations };
         });
-
         setFilePreviewPanel(prev => prev ? { ...prev, files: updatedFiles } : null);
 
         const allAnnotations = new Map<string, DocumentAnnotation[]>();
         updatedFiles.forEach(f => allAnnotations.set(f.id, f.annotations || []));
         const reviewResponse = generateReviewSummaryResponse(updatedFiles, allAnnotations);
-
-        const assistantMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          content: reviewResponse,
-          timestamp: formatTime(),
-          agentType: '通用文档助手',
-          followUpSuggestions: generateFollowUpSuggestions(reviewResponse, '通用文档助手'),
-        };
-
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === targetConvId
-              ? { ...c, messages: [...c.messages, assistantMessage] }
-              : c
-          )
-        );
-        setThinkingStatus(null);
-        setIsProcessing(false);
+        streamResponse(targetConvId, reviewResponse);
         return;
       }
 
@@ -1172,39 +1183,16 @@ export default function App() {
         const rightMime = files[1].type === 'pdf' ? 'application/pdf' : files[1].type === 'docx' ? 'application/msword' : 'application/vnd.ms-excel';
         const rightContent = generateVariantPreviewContent(files[1].name, rightMime);
         const rightFile: PreviewFile = { ...files[1], previewContent: rightContent, annotations: generateComparisonAnnotations(files[1].type, rightContent, 'right') };
+        setFilePreviewPanel({ files: [leftFile, rightFile], activeFileId: '__comparison__' });
 
-        setFilePreviewPanel({
-          files: [leftFile, rightFile],
-          activeFileId: '__comparison__',
-        });
-
-        const comparisonResponse = `文档对比分析已完成，我已在左侧预览面板中并排展示两份文档，并用颜色标注了所有差异点。\n\n**差异概览**\n- 新增内容：对比文档中新增的段落或数据\n- 已删除：仅原文档包含的内容\n- 内容变更：两份文档中表述不同的部分\n\n**主要发现**\n1. **概述部分**：两份文档的描述角度不同 -- 原文档侧重数据，对比文档侧重趋势\n2. **核心数据**：营业收入差异 280万（8,560万 vs 8,280万），毛利率差异 1.4pp\n3. **结论部分**：原文档偏向现状描述，对比文档增加了战略展望\n\n建议重点关注数据差异部分，确认哪份文档的数据更准确。`;
-
-        const assistantMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          content: comparisonResponse,
-          timestamp: formatTime(),
-          agentType: '通用文档助手',
-          followUpSuggestions: generateFollowUpSuggestions(comparisonResponse, '通用文档助手'),
-        };
-
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === targetConvId
-              ? { ...c, messages: [...c.messages, assistantMessage] }
-              : c
-          )
-        );
-        setThinkingStatus(null);
-        setIsProcessing(false);
+        const comparisonResponse = `文档对比分析已完成，我已在右侧预览面板中并排展示两份文档，并用颜色标注了所有差异点。\n\n**差异概览**\n- 新增内容：对比文档中新增的段落或数据\n- 已删除：仅原文档包含的内容\n- 内容变更：两份文档中表述不同的部分\n\n**主要发现**\n1. **概述部分**：两份文档的描述角度不同 -- 原文档侧重数据，对比文档侧重趋势\n2. **核心数据**：营业收入差异 280万（8,560万 vs 8,280万），毛利率差异 1.4pp\n3. **结论部分**：原文档偏向现状描述，对比文档增加了战略展望\n\n建议重点关注数据差异部分，确认哪份文档的数据更准确。`;
+        streamResponse(targetConvId, comparisonResponse);
         return;
       }
 
       // === 导出请求检测：用户说"导出"时生成AI文件 ===
       const isExportRequest = /导出|生成.*报告|生成.*文件|输出.*PDF|输出.*文档/.test(message);
       if (isExportRequest) {
-        // 从消息中提取导出主题
         const topicMatch = message.match(/导出(.+?)(?:的|$)|生成(.+?)(?:报告|文件)|输出(.+?)(?:PDF|文档)/);
         const topic = (topicMatch?.[1] || topicMatch?.[2] || topicMatch?.[3] || '分析报告').trim();
         const exportFileName = `${topic}.pdf`;
@@ -1218,26 +1206,6 @@ export default function App() {
           isAiGenerated: true,
         };
 
-        const exportResponse = `已为您生成文档：**${exportFileName}**\n\n**文档概要**\n- 格式：PDF\n- 内容：基于当前对话上下文整理的${topic}内容\n- 包含：摘要、核心数据、分析结论、建议\n\n您可以点击下方文件卡片预览或下载该文档。如需调整内容或格式，请告诉我。`;
-
-        const assistantMessage: Message = {
-          id: generateId(),
-          role: 'assistant',
-          content: exportResponse,
-          timestamp: formatTime(),
-          agentType: '通用文档助手',
-          attachments: [exportAttachment],
-          followUpSuggestions: ['调整报告格式', '补充更多数据', '导出Word版本'],
-        };
-
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === targetConvId
-              ? { ...c, messages: [...c.messages, assistantMessage] }
-              : c
-          )
-        );
-
         // 自动打开文件预览器
         const previewFile: PreviewFile = {
           id: exportAttachment.id,
@@ -1247,30 +1215,17 @@ export default function App() {
         };
         setFilePreviewPanel({ files: [previewFile], activeFileId: previewFile.id });
 
-        setThinkingStatus(null);
-        setIsProcessing(false);
+        const exportResponse = `已为您生成文档：**${exportFileName}**\n\n**文档概要**\n- 格式：PDF\n- 内容：基于当前对话上下文整理的${topic}内容\n- 包含：摘要、核心数据、分析结论、建议\n\n您可以点击下方文件卡片预览或下载该文档。如需调整内容或格式，请告诉我。`;
+        streamResponse(targetConvId, exportResponse, {
+          attachments: [exportAttachment],
+          followUpSuggestions: ['调整报告格式', '补充更多数据', '导出Word版本'],
+        });
         return;
       }
 
       const response = getSmartResponse(message, agentType);
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: response,
-        timestamp: formatTime(),
-        agentType: '通用文档助手',
-        followUpSuggestions: generateFollowUpSuggestions(response, '通用文档助手'),
-      };
-
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === targetConvId
-            ? { ...c, messages: [...c.messages, assistantMessage] }
-            : c
-        )
-      );
-      setIsProcessing(false);
-    }, 1000 + Math.random() * 1000);
+      streamResponse(targetConvId, response);
+    }, 3000 + Math.random() * 1000);
   };
 
   const handleCapabilityClick = (capability: CapabilityCard) => {
