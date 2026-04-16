@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { X, FileText, FileSpreadsheet, File, Image, Braces, FileCode, Database, FolderOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Download, ChevronDown } from 'lucide-react';
+import { X, FileText, FileSpreadsheet, File, Image, Braces, FileCode, Database, FolderOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, ChevronDown } from 'lucide-react';
 import { DocumentPreview } from '@/app/components/DocumentPreview';
 import type { DocumentAnnotation } from '@/app/components/DocumentPreview';
 
@@ -285,10 +285,6 @@ function SingleDocView({
     setCurrentPage(p => Math.min(totalPages - 1, p + 1));
   }, [totalPages]);
 
-  const handleFitWidth = useCallback(() => {
-    setZoom(100);
-  }, []);
-
   const handleDownload = useCallback(() => {
     // Mock download
     const link = document.createElement('a');
@@ -339,9 +335,6 @@ function SingleDocView({
 
         {/* Right section: fit + zoom + download + close */}
         <div className="flex items-center gap-0.5">
-          <ToolbarBtn onClick={handleFitWidth} title="适应宽度">
-            <Maximize className="w-3.5 h-3.5" />
-          </ToolbarBtn>
           <ToolbarBtn onClick={() => setZoom(z => Math.max(50, z - 10))} title="缩小">
             <ZoomOut className="w-3.5 h-3.5" />
           </ToolbarBtn>

@@ -221,7 +221,7 @@ export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment,
             ) : message.role === 'user' ? (
               /* User message — Claude style: right-aligned soft bubble, no avatar */
               <div className="flex justify-end">
-                <div className="max-w-[80%] space-y-2">
+                <div className="max-w-[80%] w-fit space-y-2 ml-auto">
                   {message.attachments && message.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-2 justify-end">
                       {message.attachments.map((attachment) => {
