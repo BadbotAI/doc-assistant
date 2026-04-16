@@ -122,8 +122,8 @@ function DocSwitcher({
 
   if (files.length <= 1) {
     return (
-      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-stone-500">
-        <div className={`w-6 h-6 rounded-md flex items-center justify-center ${getTabColor(activeFile?.type || '', true)}`}>
+      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-stone-400">
+        <div className="w-6 h-6 rounded-md flex items-center justify-center bg-stone-100 text-stone-400">
           <Icon className="w-3.5 h-3.5" />
         </div>
       </div>
