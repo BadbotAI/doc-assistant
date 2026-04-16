@@ -13,7 +13,7 @@ import type { DocumentAnnotation } from '@/app/components/DocumentPreview';
 import { FilePreviewPanel } from '@/app/components/FilePreviewPanel';
 import type { PreviewFile } from '@/app/components/FilePreviewPanel';
 import { ConversationFileList } from '@/app/components/ConversationFileList';
-import { FolderOpen, X, FileText, FileSpreadsheet, ShieldCheck, BookOpen, PanelRight } from 'lucide-react';
+import { FolderOpen, X, PanelRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Conversation {
@@ -1467,28 +1467,25 @@ export default function App() {
                 <p className="text-[11.5px] text-muted-foreground/50 text-center mb-3 tracking-wide">应用案例</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { title: '合同条款提取与对比', subtitle: '自动识别合同关键条款，多版本差异对比', gradient: 'from-blue-400/80 to-cyan-300/60', icon: FileText },
-                    { title: '财务报表数据审核', subtitle: '关键财务指标校验与异常值检测', gradient: 'from-emerald-400/80 to-teal-300/60', icon: FileSpreadsheet },
-                    { title: '政策文件合规审查', subtitle: '对标法规条文，自动识别合规风险', gradient: 'from-violet-400/80 to-purple-300/60', icon: ShieldCheck },
-                    { title: '产品说明书摘要', subtitle: '多语言文档快速摘要与要点提取', gradient: 'from-amber-400/80 to-orange-300/60', icon: BookOpen },
-                  ].map((cs) => {
-                    const CsIcon = cs.icon;
-                    return (
+                    { title: '合同条款提取与对比', subtitle: '自动识别合同关键条款，多版本差异对比', image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=200&fit=crop' },
+                    { title: '财务报表数据审核', subtitle: '关键财务指标校验与异常值检测', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=200&fit=crop' },
+                    { title: '政策文件合规审查', subtitle: '对标法规条文，自动识别合规风险', image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=200&fit=crop' },
+                    { title: '产品说明书摘要', subtitle: '多语言文档快速摘要与要点提取', image: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=200&fit=crop' },
+                  ].map((cs) => (
                       <div
                         key={cs.title}
                         className="group rounded-xl border border-border bg-white hover:border-primary/25 hover:shadow-sm transition-all duration-200 overflow-hidden cursor-pointer"
                         onClick={() => inputAreaRef.current?.setInputMessage(`请帮我进行${cs.title}`)}
                       >
-                        <div className={`h-[72px] bg-gradient-to-br ${cs.gradient} flex items-center justify-center`}>
-                          <CsIcon className="w-7 h-7 text-white/80" />
+                        <div className="h-[72px] overflow-hidden">
+                          <img src={cs.image} alt={cs.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         </div>
                         <div className="px-3 py-2.5">
                           <p className="text-[12.5px] font-medium text-foreground group-hover:text-primary transition-colors">{cs.title}</p>
                           <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{cs.subtitle}</p>
                         </div>
                       </div>
-                    );
-                  })}
+                  ))}
                 </div>
               </div>
             </div>
