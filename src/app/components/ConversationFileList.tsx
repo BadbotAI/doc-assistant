@@ -67,25 +67,23 @@ export function ConversationFileList({ files, activeFileId, onSelectFile, onClos
               <button
                 key={file.id}
                 onClick={() => onSelectFile(file.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
                   isActive
                     ? 'bg-primary/[0.06] border-l-2 border-primary'
                     : 'hover:bg-accent/40 border-l-2 border-transparent'
                 }`}
               >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 ${
                   isActive ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'
                 }`}>
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon className="w-3 h-3" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-[12px] truncate ${isActive ? 'font-medium text-primary' : 'text-foreground'}`}>
-                    {file.name}
-                  </p>
-                  <span className={`text-[10px] ${isActive ? 'text-primary/60' : 'text-muted-foreground/60'}`}>
-                    {getTypeBadge(file.type)}
-                  </span>
-                </div>
+                <p className={`text-[11.5px] truncate flex-1 min-w-0 ${isActive ? 'font-medium text-primary' : 'text-foreground'}`}>
+                  {file.name}
+                </p>
+                <span className={`text-[10px] flex-shrink-0 ${isActive ? 'text-primary/50' : 'text-muted-foreground/40'}`}>
+                  {getTypeBadge(file.type)}
+                </span>
               </button>
             );
           })}

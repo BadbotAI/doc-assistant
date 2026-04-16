@@ -13,7 +13,7 @@ import type { DocumentAnnotation } from '@/app/components/DocumentPreview';
 import { FilePreviewPanel } from '@/app/components/FilePreviewPanel';
 import type { PreviewFile } from '@/app/components/FilePreviewPanel';
 import { ConversationFileList } from '@/app/components/ConversationFileList';
-import { FolderOpen, X, PanelRight } from 'lucide-react';
+import { FolderOpen, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Conversation {
@@ -853,6 +853,7 @@ export default function App() {
   const [showConversationFiles, setShowConversationFiles] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
+  const [welcomeFilesUploaded, setWelcomeFilesUploaded] = useState(false);
   const inputAreaRef = useRef<InputAreaRef>(null);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
@@ -860,6 +861,7 @@ export default function App() {
   const handleNewConversation = () => {
     // 重置退出文档模式标志
     setHasExitedDocumentMode(false);
+    setWelcomeFilesUploaded(false);
     // 清除活跃对话，回到欢迎页（不创建空对话）
     setActiveConversationId('');
     setActiveAgentType(null);
@@ -1188,6 +1190,46 @@ export default function App() {
         return;
       }
 
+      // === 导出请求检测：用户说"导出"时生成AI文件 ===
+      const isExportRequest = /导出|生成.*报告|生成.*文件|输出.*PDF|输出.*文档/.test(message);
+      if (isExportRequest) {
+        // 从消息中提取导出主题
+        const topicMatch = message.match(/导出(.+?)(?:的|$)|生成(.+?)(?:报告|文件)|输出(.+?)(?:PDF|文档)/);
+        const topic = (topicMatch?.[1] || topicMatch?.[2] || topicMatch?.[3] || '分析报告').trim();
+        const exportFileName = `${topic}.pdf`;
+
+        const exportAttachment: MessageAttachment = {
+          id: generateId(),
+          name: exportFileName,
+          type: 'application/pdf',
+          size: `${(Math.random() * 2 + 0.5).toFixed(1)} MB`,
+          status: 'ready',
+          isAiGenerated: true,
+        };
+
+        const exportResponse = `已为您生成文档：**${exportFileName}**\n\n**文档概要**\n- 格式：PDF\n- 内容：基于当前对话上下文整理的${topic}内容\n- 包含：摘要、核心数据、分析结论、建议\n\n您可以点击下方文件卡片预览或下载该文档。如需调整内容或格式，请告诉我。`;
+
+        const assistantMessage: Message = {
+          id: generateId(),
+          role: 'assistant',
+          content: exportResponse,
+          timestamp: formatTime(),
+          agentType: '通用文档助手',
+          attachments: [exportAttachment],
+          followUpSuggestions: ['调整报告格式', '补充更多数据', '导出Word版本'],
+        };
+
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === targetConvId
+              ? { ...c, messages: [...c.messages, assistantMessage] }
+              : c
+          )
+        );
+        setIsProcessing(false);
+        return;
+      }
+
       const response = getSmartResponse(message, agentType);
       const assistantMessage: Message = {
         id: generateId(),
@@ -1231,6 +1273,11 @@ export default function App() {
 
     // Pass to InputArea as pending inline attachments
     inputAreaRef.current?.addPendingAttachments(attachments);
+
+    // 在欢迎页上传文件时，隐藏案例卡片
+    if (!activeConversation) {
+      setWelcomeFilesUploaded(true);
+    }
   };
 
   const handleDeleteDocument = (docId: string) => {
@@ -1482,32 +1529,41 @@ export default function App() {
               />
               </div>
 
-              {/* Case Study Cards */}
-              <div className="w-full mt-8">
-                <p className="text-[11.5px] text-muted-foreground/50 text-center mb-3 tracking-wide">应用案例</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { title: '合同条款提取与对比', subtitle: '自动识别合同关键条款，多版本差异对比', image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=200&fit=crop' },
-                    { title: '财务报表数据审核', subtitle: '关键财务指标校验与异常值检测', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=200&fit=crop' },
-                    { title: '政策文件合规审查', subtitle: '对标法规条文，自动识别合规风险', image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=200&fit=crop' },
-                    { title: '产品说明书摘要', subtitle: '多语言文档快速摘要与要点提取', image: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=200&fit=crop' },
-                  ].map((cs) => (
-                      <div
-                        key={cs.title}
-                        className="group rounded-xl border border-border bg-white hover:border-primary/25 hover:shadow-sm transition-all duration-200 overflow-hidden cursor-pointer"
-                        onClick={() => inputAreaRef.current?.setInputMessage(`请帮我进行${cs.title}`)}
-                      >
-                        <div className="h-[72px] overflow-hidden">
-                          <img src={cs.image} alt={cs.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        </div>
-                        <div className="px-3 py-2.5">
-                          <p className="text-[12.5px] font-medium text-foreground group-hover:text-primary transition-colors">{cs.title}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{cs.subtitle}</p>
-                        </div>
-                      </div>
-                  ))}
-                </div>
-              </div>
+              {/* Case Study Cards — disappear when files uploaded */}
+              <AnimatePresence>
+                {!welcomeFilesUploaded && (
+                  <motion.div
+                    className="w-full mt-8"
+                    initial={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0, marginTop: 0, overflow: 'hidden' }}
+                    transition={{ duration: 0.4, ease: 'easeInOut' }}
+                  >
+                    <p className="text-[11.5px] text-muted-foreground/50 text-center mb-3 tracking-wide">应用案例</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { title: '合同条款提取与对比', subtitle: '自动识别合同关键条款，多版本差异对比', image: 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=200&fit=crop', query: '请帮我提取合同中的关键条款，并对比不同版本之间的差异' },
+                        { title: '财务报表数据审核', subtitle: '关键财务指标校验与异常值检测', image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=200&fit=crop', query: '请帮我审核财务报表数据，校验关键指标并检测异常值' },
+                        { title: '政策文件合规审查', subtitle: '对标法规条文，自动识别合规风险', image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400&h=200&fit=crop', query: '请帮我审查政策文件的合规性，对标法规条文识别潜在风险' },
+                        { title: '产品说明书摘要', subtitle: '多语言文档快速摘要与要点提取', image: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=200&fit=crop', query: '请帮我生成产品说明书的摘要，提取核心要点' },
+                      ].map((cs) => (
+                          <div
+                            key={cs.title}
+                            className="group rounded-xl border border-border bg-white hover:border-primary/25 hover:shadow-sm transition-all duration-200 overflow-hidden cursor-pointer"
+                            onClick={() => handleSendMessage(cs.query, '通用文档助手')}
+                          >
+                            <div className="h-[72px] overflow-hidden">
+                              <img src={cs.image} alt={cs.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            </div>
+                            <div className="px-3 py-2.5">
+                              <p className="text-[12.5px] font-medium text-foreground group-hover:text-primary transition-colors">{cs.title}</p>
+                              <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{cs.subtitle}</p>
+                            </div>
+                          </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </motion.div>
           </AnimatePresence>
@@ -1546,7 +1602,7 @@ export default function App() {
                     }`}
                     title={showConversationFiles ? '收起文件列表' : '显示文件列表'}
                   >
-                    <PanelRight className="w-3.5 h-3.5" />
+                    <FolderOpen className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
@@ -1581,7 +1637,7 @@ export default function App() {
 
           {/* Conversation File List - between chat and preview */}
           {filePreviewPanel && showConversationFiles && (
-            <div className="w-[208px] flex-shrink-0 border-l border-border">
+            <div className="w-[280px] flex-shrink-0 border-l border-border">
               <ConversationFileList
                 files={filePreviewPanel.files}
                 activeFileId={filePreviewPanel.activeFileId}
@@ -1593,7 +1649,7 @@ export default function App() {
 
           {/* File Preview Panel - right side when active */}
           {filePreviewPanel && (
-            <div className="flex-1 min-w-[480px] border-l border-border">
+            <div className="flex-1 min-w-[380px] border-l border-border">
               <FilePreviewPanel
                 files={filePreviewPanel.files}
                 activeFileId={filePreviewPanel.activeFileId}

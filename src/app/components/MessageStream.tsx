@@ -28,6 +28,7 @@ export interface MessageAttachment {
   type: string;
   size: string;
   status: 'uploading' | 'ready' | 'error';
+  isAiGenerated?: boolean;
 }
 
 export interface Message {
@@ -91,8 +92,11 @@ function AttachmentCard({ attachment, messageId, onDelete }: { attachment: Messa
       isLoading ? `${colors.bg} ${colors.border} animate-pulse` : isReady ? `bg-white ${colors.border} hover:shadow-sm` : 'bg-red-50 border-red-200'
     }`}>
       {/* Icon area */}
-      <div className={`w-full h-[72px] ${colors.bg} flex items-center justify-center`}>
+      <div className={`w-full h-[72px] ${colors.bg} flex items-center justify-center relative`}>
         {isLoading ? <Loader2 className={`w-6 h-6 ${colors.icon} animate-spin`} /> : <Icon className={`w-6 h-6 ${colors.icon}`} />}
+        {attachment.isAiGenerated && (
+          <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 text-[9px] font-semibold bg-violet-500 text-white rounded-md leading-none">AI</span>
+        )}
       </div>
       {/* Info area */}
       <div className="px-2.5 py-2">

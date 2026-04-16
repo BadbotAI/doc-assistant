@@ -366,9 +366,13 @@ export function ConversationSidebar({
               <Home className="w-[18px] h-[18px]" />
             </button>
           ) : (
-            <span className="text-[17px] font-semibold text-white tracking-tight pl-[15px] whitespace-nowrap" style={{ fontFamily: "'Noto Serif SC', serif" }}>
+            <button
+              onClick={onNewConversation}
+              className="text-[17px] font-semibold text-white tracking-tight pl-[15px] whitespace-nowrap hover:text-white/80 transition-colors"
+              style={{ fontFamily: "'Noto Serif SC', serif" }}
+            >
               通用文档助手
-            </span>
+            </button>
           )}
         </div>
 
