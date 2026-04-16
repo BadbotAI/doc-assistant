@@ -12,7 +12,8 @@ import {
   Clock,
   Home,
   MoreHorizontal,
-  Star
+  Star,
+  Pencil
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -38,6 +39,7 @@ interface ConversationSidebarProps {
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onToggleFavorite: (id: string) => void;
+  onRenameConversation: (id: string, newTitle: string) => void;
   onOpenFileManager: () => void;
   onSelectAgent: (agentType: string) => void;
   hidden?: boolean;
@@ -52,6 +54,7 @@ export function ConversationSidebar({
   onSelectConversation,
   onDeleteConversation,
   onToggleFavorite,
+  onRenameConversation,
   onOpenFileManager,
   hidden,
   documents = [],
@@ -61,6 +64,8 @@ export function ConversationSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTab, setSearchTab] = useState<'conversations' | 'files'>('conversations');
   const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredConversations = searchQuery.trim()
@@ -287,6 +292,62 @@ export function ConversationSidebar({
 
   const isCollapsed = !!hidden;
 
+  const renderConvItem = (conversation: Conversation, isFav: boolean) => {
+    const isActive = activeConversationId === conversation.id;
+    const isRenaming = renamingId === conversation.id;
+
+    return (
+      <div
+        key={`${isFav ? 'fav-' : ''}${conversation.id}`}
+        className={`group/conv relative flex items-center px-3 py-[9px] rounded-lg cursor-pointer transition-colors duration-150 ${isActive ? 'bg-white/12 text-white' : 'text-white/50 hover:bg-white/7 hover:text-white/75'}`}
+        onClick={() => { if (!isRenaming) onSelectConversation(conversation.id); }}
+      >
+        {isRenaming ? (
+          <input
+            autoFocus
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onBlur={() => { onRenameConversation(conversation.id, renameValue); setRenamingId(null); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { onRenameConversation(conversation.id, renameValue); setRenamingId(null); } if (e.key === 'Escape') setRenamingId(null); }}
+            onClick={(e) => e.stopPropagation()}
+            className="text-[13px] flex-1 min-w-0 bg-transparent text-white/90 border-b border-primary outline-none"
+          />
+        ) : (
+          <span className={`text-[13px] truncate flex-1 min-w-0 ${isActive ? 'text-white/95' : ''}`}>{conversation.title}</span>
+        )}
+        {!isRenaming && (
+          <>
+            <span className="text-[10px] text-white/20 flex-shrink-0 tabular-nums ml-1 group-hover/conv:hidden">{conversation.timestamp}</span>
+            <div className="relative hidden group-hover/conv:flex flex-shrink-0 ml-1">
+              <button
+                className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors"
+                onClick={(e) => { e.stopPropagation(); setMoreMenuId(moreMenuId === conversation.id ? null : conversation.id); }}
+              >
+                <MoreHorizontal className="w-3.5 h-3.5 text-white/40" />
+              </button>
+              {moreMenuId === conversation.id && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMoreMenuId(null)} />
+                  <div className="absolute right-0 top-6 w-32 bg-[#2a2d38] rounded-lg border border-white/10 shadow-xl z-50 py-1">
+                    <button className="w-full px-3 py-2 text-left text-[12px] text-white/70 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); setRenameValue(conversation.title); setRenamingId(conversation.id); setMoreMenuId(null); }}>
+                      <Pencil className="w-3 h-3" />重命名
+                    </button>
+                    <button className="w-full px-3 py-2 text-left text-[12px] text-amber-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onToggleFavorite(conversation.id); setMoreMenuId(null); }}>
+                      <Star className="w-3 h-3" />{isFav ? '取消收藏' : '收藏'}
+                    </button>
+                    <button className="w-full px-3 py-2 text-left text-[12px] text-red-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onDeleteConversation(conversation.id); setMoreMenuId(null); }}>
+                      <Trash2 className="w-3 h-3" />删除
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       {searchOverlay}
@@ -328,10 +389,10 @@ export function ConversationSidebar({
                 ? 'bg-white/12 text-white/90'
                 : 'text-white/60 hover:bg-white/7 hover:text-white/80'
             }`}
-            title="管理文件"
+            title="文件夹"
           >
             <FolderOpen className="w-[18px] h-[18px] flex-shrink-0" />
-            {!isCollapsed && <span className="text-[13.5px] whitespace-nowrap">管理文件</span>}
+            {!isCollapsed && <span className="text-[13.5px] whitespace-nowrap">文件夹</span>}
           </button>
           <button
             onClick={() => setShowSearch(true)}
@@ -355,40 +416,7 @@ export function ConversationSidebar({
                   </span>
                 </div>
                 <div className="space-y-0.5 pb-4">
-                  {conversations.filter(c => c.isFavorited).map((conversation) => {
-                    const isActive = activeConversationId === conversation.id;
-                    return (
-                      <div
-                        key={`fav-${conversation.id}`}
-                        className={`group/conv relative flex items-center px-3 py-[9px] rounded-lg cursor-pointer transition-colors duration-150 ${isActive ? 'bg-white/12 text-white' : 'text-white/50 hover:bg-white/7 hover:text-white/75'}`}
-                        onClick={() => onSelectConversation(conversation.id)}
-                      >
-                        <span className={`text-[13px] truncate flex-1 min-w-0 ${isActive ? 'text-white/95' : ''}`}>{conversation.title}</span>
-                        <span className="text-[10px] text-white/20 flex-shrink-0 tabular-nums ml-1 group-hover/conv:hidden">{conversation.timestamp}</span>
-                        <div className="relative hidden group-hover/conv:flex flex-shrink-0 ml-1">
-                          <button
-                            className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors"
-                            onClick={(e) => { e.stopPropagation(); setMoreMenuId(moreMenuId === conversation.id ? null : conversation.id); }}
-                          >
-                            <MoreHorizontal className="w-3.5 h-3.5 text-white/40" />
-                          </button>
-                          {moreMenuId === conversation.id && (
-                            <>
-                              <div className="fixed inset-0 z-40" onClick={() => setMoreMenuId(null)} />
-                              <div className="absolute right-0 top-6 w-32 bg-[#2a2d38] rounded-lg border border-white/10 shadow-xl z-50 py-1">
-                                <button className="w-full px-3 py-2 text-left text-[12px] text-amber-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onToggleFavorite(conversation.id); setMoreMenuId(null); }}>
-                                  <Star className="w-3 h-3" />取消收藏
-                                </button>
-                                <button className="w-full px-3 py-2 text-left text-[12px] text-red-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onDeleteConversation(conversation.id); setMoreMenuId(null); }}>
-                                  <Trash2 className="w-3 h-3" />删除
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {conversations.filter(c => c.isFavorited).map((conv) => renderConvItem(conv, true))}
                 </div>
               </>
             )}
@@ -398,40 +426,7 @@ export function ConversationSidebar({
               <span className="text-[12px] text-white/30 tracking-wide">最近对话</span>
             </div>
             <div className="space-y-0.5 pb-3">
-              {conversations.filter(c => !c.isFavorited).map((conversation) => {
-                const isActive = activeConversationId === conversation.id;
-                return (
-                  <div
-                    key={conversation.id}
-                    className={`group/conv relative flex items-center px-3 py-[9px] rounded-lg cursor-pointer transition-colors duration-150 ${isActive ? 'bg-white/12 text-white' : 'text-white/50 hover:bg-white/7 hover:text-white/75'}`}
-                    onClick={() => onSelectConversation(conversation.id)}
-                  >
-                    <span className={`text-[13px] truncate flex-1 min-w-0 ${isActive ? 'text-white/95' : ''}`}>{conversation.title}</span>
-                    <span className="text-[10px] text-white/20 flex-shrink-0 tabular-nums ml-1 group-hover/conv:hidden">{conversation.timestamp}</span>
-                    <div className="relative hidden group-hover/conv:flex flex-shrink-0 ml-1">
-                      <button
-                        className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors"
-                        onClick={(e) => { e.stopPropagation(); setMoreMenuId(moreMenuId === conversation.id ? null : conversation.id); }}
-                      >
-                        <MoreHorizontal className="w-3.5 h-3.5 text-white/40" />
-                      </button>
-                      {moreMenuId === conversation.id && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setMoreMenuId(null)} />
-                          <div className="absolute right-0 top-6 w-32 bg-[#2a2d38] rounded-lg border border-white/10 shadow-xl z-50 py-1">
-                            <button className="w-full px-3 py-2 text-left text-[12px] text-amber-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onToggleFavorite(conversation.id); setMoreMenuId(null); }}>
-                              <Star className="w-3 h-3" />收藏
-                            </button>
-                            <button className="w-full px-3 py-2 text-left text-[12px] text-red-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onDeleteConversation(conversation.id); setMoreMenuId(null); }}>
-                              <Trash2 className="w-3 h-3" />删除
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {conversations.filter(c => !c.isFavorited).map((conv) => renderConvItem(conv, false))}
             </div>
           </div>
         ) : (

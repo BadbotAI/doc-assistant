@@ -710,6 +710,7 @@ export default function App() {
         title: '2024年度财务报告分析',
         timestamp: '15:30',
         date: new Date(now.getTime() - 2 * 60 * 60 * 1000), // 2小时前
+        isFavorited: true,
         messages: [
           {
             id: 'm1',
@@ -737,6 +738,7 @@ export default function App() {
         title: '产品需求文档审核',
         timestamp: '昨天 14:20',
         date: new Date(now.getTime() - 24 * 60 * 60 * 1000), // 1天前
+        isFavorited: true,
         messages: [
           {
             id: 'm3',
@@ -849,6 +851,8 @@ export default function App() {
   const [filePreviewPanel, setFilePreviewPanel] = useState<{ files: PreviewFile[]; activeFileId: string } | null>(null);
   const [welcomeKey, setWelcomeKey] = useState(0);
   const [showConversationFiles, setShowConversationFiles] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editTitleValue, setEditTitleValue] = useState('');
   const inputAreaRef = useRef<InputAreaRef>(null);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
@@ -907,6 +911,13 @@ export default function App() {
   const handleToggleFavorite = (id: string) => {
     setConversations(prev =>
       prev.map(c => c.id === id ? { ...c, isFavorited: !c.isFavorited } : c)
+    );
+  };
+
+  const handleRenameConversation = (id: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    setConversations(prev =>
+      prev.map(c => c.id === id ? { ...c, title: newTitle.trim() } : c)
     );
   };
 
@@ -1351,6 +1362,7 @@ export default function App() {
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
         onToggleFavorite={handleToggleFavorite}
+        onRenameConversation={handleRenameConversation}
         onOpenFileManager={() => setShowFileManager(true)}
         onSelectAgent={handleSelectAgent}
         hidden={!!filePreviewPanel || !!documentChatMode || showFileManager}
@@ -1439,7 +1451,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="flex-1 flex flex-col items-center justify-start pt-[12vh] bg-white overflow-y-auto"
+            className="flex-1 flex flex-col items-center justify-start pt-[22vh] bg-white overflow-y-auto"
           >
             <div className="w-full max-w-[960px] flex flex-col items-center px-8">
               {/* Greeting */}
@@ -1504,9 +1516,26 @@ export default function App() {
             {/* Conversation Title + gradient fade */}
             <div className={`${filePreviewPanel ? 'px-4 pt-4' : 'px-6 pt-5'} flex-shrink-0 relative`}>
               <div className={`${filePreviewPanel ? 'max-w-none' : 'max-w-[880px]'} mx-auto pb-3 flex items-center gap-2`}>
-                <h1 className={`${filePreviewPanel ? 'text-[15px]' : 'text-[18px]'} font-semibold text-foreground tracking-tight flex-1`} style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>
-                  {activeConversation?.title || '对话'}
-                </h1>
+                {editingTitle && activeConversation ? (
+                  <input
+                    autoFocus
+                    value={editTitleValue}
+                    onChange={(e) => setEditTitleValue(e.target.value)}
+                    onBlur={() => { handleRenameConversation(activeConversation.id, editTitleValue); setEditingTitle(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { handleRenameConversation(activeConversation.id, editTitleValue); setEditingTitle(false); } if (e.key === 'Escape') setEditingTitle(false); }}
+                    className={`${filePreviewPanel ? 'text-[15px]' : 'text-[18px]'} font-semibold text-foreground tracking-tight flex-1 bg-transparent border-b-2 border-primary outline-none`}
+                    style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}
+                  />
+                ) : (
+                  <h1
+                    className={`${filePreviewPanel ? 'text-[15px]' : 'text-[18px]'} font-semibold text-foreground tracking-tight flex-1 cursor-pointer hover:text-primary/80 transition-colors`}
+                    style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}
+                    onClick={() => { if (activeConversation) { setEditTitleValue(activeConversation.title); setEditingTitle(true); } }}
+                    title="点击编辑标题"
+                  >
+                    {activeConversation?.title || '对话'}
+                  </h1>
+                )}
                 {filePreviewPanel && filePreviewPanel.files.length > 0 && (
                   <button
                     onClick={() => setShowConversationFiles(prev => !prev)}
