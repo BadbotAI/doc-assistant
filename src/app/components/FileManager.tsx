@@ -703,7 +703,7 @@ redis:
               <button onClick={onBack} className="w-7 h-7 -ml-1 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex-shrink-0">
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <h1 className="text-[18px] font-semibold text-foreground leading-tight tracking-tight" style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>文件管理</h1>
+              <h1 className="text-[18px] font-semibold text-foreground leading-tight tracking-tight" style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>文件夹</h1>
             </div>
 
             <div className="pb-2">
