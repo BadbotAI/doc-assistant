@@ -854,6 +854,7 @@ export default function App() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [editTitleValue, setEditTitleValue] = useState('');
   const [welcomeFilesUploaded, setWelcomeFilesUploaded] = useState(false);
+  const [thinkingStatus, setThinkingStatus] = useState<string | null>(null);
   const inputAreaRef = useRef<InputAreaRef>(null);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
@@ -996,9 +997,11 @@ export default function App() {
                               currentDocs.length >= 2;
 
     setIsProcessing(true);
+    setThinkingStatus('思考中...');
 
     // === 文件附件解析流程 ===
     if (attachments && attachments.length > 0) {
+      setThinkingStatus(null); // 文件流程用parsingState，不用thinkingStatus
       const convId = targetConvId;
       const parsingFiles = attachments.map(att => ({
         id: att.id,
@@ -1113,6 +1116,7 @@ export default function App() {
               : c
           )
         );
+        setThinkingStatus(null);
         setIsProcessing(false);
       }, 3200);
 
@@ -1120,8 +1124,13 @@ export default function App() {
     }
 
     // === 普通消息流程 ===
+    // 思考中 → 生成回复中
+    const thinkDelay = 600 + Math.random() * 400;
+    setTimeout(() => setThinkingStatus('生成回复中...'), thinkDelay);
+
     // 模拟AI处理延迟
     setTimeout(() => {
+      setThinkingStatus(null);
       // === 审核请求检测：当预览面板已打开时 ===
       if (isReviewRequest(message) && filePreviewPanel) {
         const updatedFiles = filePreviewPanel.files.map(file => {
@@ -1151,6 +1160,7 @@ export default function App() {
               : c
           )
         );
+        setThinkingStatus(null);
         setIsProcessing(false);
         return;
       }
@@ -1186,6 +1196,7 @@ export default function App() {
               : c
           )
         );
+        setThinkingStatus(null);
         setIsProcessing(false);
         return;
       }
@@ -1236,6 +1247,7 @@ export default function App() {
         };
         setFilePreviewPanel({ files: [previewFile], activeFileId: previewFile.id });
 
+        setThinkingStatus(null);
         setIsProcessing(false);
         return;
       }
@@ -1465,6 +1477,7 @@ export default function App() {
               onCapabilityClick={handleCapabilityClick}
               onDeleteAttachment={handleDeleteAttachment}
               parsingState={parsingState}
+              thinkingStatus={thinkingStatus}
               onSuggestionClick={handleSuggestionClick}
               compact
             />
@@ -1543,7 +1556,7 @@ export default function App() {
               <AnimatePresence>
                 {!welcomeFilesUploaded && (
                   <motion.div
-                    className="w-full mt-8"
+                    className="w-full mt-8 px-6"
                     initial={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0, marginTop: 0, overflow: 'hidden' }}
                     transition={{ duration: 0.4, ease: 'easeInOut' }}
@@ -1580,8 +1593,8 @@ export default function App() {
         ) : (
           <>
             {/* Conversation Title + gradient fade */}
-            <div className={`${filePreviewPanel ? 'px-4 pt-4' : 'px-6 pt-5'} flex-shrink-0 relative`}>
-              <div className={`${filePreviewPanel ? 'max-w-none' : 'max-w-[880px]'} mx-auto pb-3 flex items-center gap-2`}>
+            <div className={`${filePreviewPanel ? 'px-4' : 'px-6'} flex-shrink-0 relative border-b border-border`}>
+              <div className={`${filePreviewPanel ? 'max-w-none' : 'max-w-[880px]'} mx-auto min-h-[42px] flex items-center gap-2`}>
                 {editingTitle && activeConversation ? (
                   <input
                     autoFocus
@@ -1616,8 +1629,6 @@ export default function App() {
                   </button>
                 )}
               </div>
-              <div className="absolute bottom-0 left-0 right-0 h-px bg-primary/12 pointer-events-none" />
-              <div className="absolute bottom-[-4px] left-0 right-0 h-[4px] bg-gradient-to-b from-black/[0.03] to-transparent pointer-events-none" />
             </div>
 
             {/* Message Stream */}
@@ -1635,6 +1646,7 @@ export default function App() {
                 setFilePreviewPanel({ files: [pf], activeFileId: pf.id });
               }}
               parsingState={parsingState}
+              thinkingStatus={thinkingStatus}
               onSuggestionClick={handleSuggestionClick}
               compact={!!filePreviewPanel}
             />
@@ -1675,6 +1687,7 @@ export default function App() {
                 onChangeActiveFile={(id) => setFilePreviewPanel(prev => prev ? { ...prev, activeFileId: id } : null)}
                 onClose={() => setFilePreviewPanel(null)}
                 onOpenFileManager={() => { setFilePreviewPanel(null); setShowFileManager(true); }}
+                hideDocSwitcher={showConversationFiles}
               />
             </div>
           )}

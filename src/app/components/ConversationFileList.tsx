@@ -1,4 +1,4 @@
-import { FileText, FileSpreadsheet, Image, Braces, FileCode, Database, Presentation, X } from 'lucide-react';
+import { FileText, FileSpreadsheet, Image, Braces, FileCode, Database, Presentation, X, Download } from 'lucide-react';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import type { PreviewFile } from '@/app/components/FilePreviewPanel';
 
@@ -22,31 +22,16 @@ function getFileIcon(type: string) {
   }
 }
 
-function getTypeBadge(type: string) {
-  switch (type) {
-    case 'pdf': return 'PDF';
-    case 'docx': return 'Word';
-    case 'xlsx': return 'Excel';
-    case 'image': return 'IMG';
-    case 'json': return 'JSON';
-    case 'yaml': return 'YAML';
-    case 'xml': return 'XML';
-    case 'pptx': return 'PPT';
-    case 'parquet': return 'Data';
-    default: return type.toUpperCase();
-  }
-}
-
 export function ConversationFileList({ files, activeFileId, onSelectFile, onClose }: ConversationFileListProps) {
   // Filter out comparison sentinel
   const realFiles = files.filter(f => f.id !== '__comparison__');
 
   return (
     <div className="flex flex-col h-full bg-white">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-3 border-b border-border flex-shrink-0">
+      {/* Header — match chat title bar height (min-h-[42px]) */}
+      <div className="flex items-center justify-between px-3 min-h-[42px] border-b border-border flex-shrink-0">
         <span className="text-[12px] font-medium text-foreground">
-          对话文件
+          文件列表
           <span className="ml-1.5 text-[10.5px] text-muted-foreground">{realFiles.length}</span>
         </span>
         <button
@@ -67,7 +52,7 @@ export function ConversationFileList({ files, activeFileId, onSelectFile, onClos
               <button
                 key={file.id}
                 onClick={() => onSelectFile(file.id)}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
+                className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors group ${
                   isActive
                     ? 'bg-primary/[0.06] border-l-2 border-primary'
                     : 'hover:bg-accent/40 border-l-2 border-transparent'
@@ -81,9 +66,7 @@ export function ConversationFileList({ files, activeFileId, onSelectFile, onClos
                 <p className={`text-[11.5px] truncate flex-1 min-w-0 ${isActive ? 'font-medium text-primary' : 'text-foreground'}`}>
                   {file.name}
                 </p>
-                <span className={`text-[10px] flex-shrink-0 ${isActive ? 'text-primary/50' : 'text-muted-foreground/40'}`}>
-                  {getTypeBadge(file.type)}
-                </span>
+                <Download className="w-3 h-3 flex-shrink-0 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
               </button>
             );
           })}

@@ -48,6 +48,7 @@ interface MessageStreamProps {
   onDeleteAttachment?: (messageId: string, attachmentId: string) => void;
   onOpenFile?: (attachment: MessageAttachment) => void;
   parsingState?: ParsingState | null;
+  thinkingStatus?: string | null;
   onSuggestionClick?: (query: string) => void;
   compact?: boolean;
 }
@@ -169,7 +170,7 @@ function ParsingIndicator({ parsingState }: { parsingState: ParsingState }) {
   );
 }
 
-export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment, onOpenFile, parsingState, onSuggestionClick, compact }: MessageStreamProps) {
+export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment, onOpenFile, parsingState, thinkingStatus, onSuggestionClick, compact }: MessageStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -345,6 +346,16 @@ export function MessageStream({ messages, onCapabilityClick, onDeleteAttachment,
         ))}
 
         {parsingState && <ParsingIndicator parsingState={parsingState} />}
+
+        {/* AI thinking status */}
+        {thinkingStatus && !parsingState && (
+          <div className="flex items-center gap-2 py-1">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[13px] text-muted-foreground">{thinkingStatus}</span>
+            </div>
+          </div>
+        )}
       </div>
     </ScrollArea>
     </div>

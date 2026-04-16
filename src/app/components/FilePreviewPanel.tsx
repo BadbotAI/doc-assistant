@@ -17,6 +17,7 @@ interface FilePreviewPanelProps {
   onChangeActiveFile: (id: string) => void;
   onClose: () => void;
   onOpenFileManager?: () => void;
+  hideDocSwitcher?: boolean;
 }
 
 function getTabIcon(type: string) {
@@ -222,7 +223,7 @@ function ComparisonView({ files, onClose, onOpenFileManager }: { files: PreviewF
 }
 
 /* ── Main export ── */
-export function FilePreviewPanel({ files, activeFileId, onChangeActiveFile, onClose, onOpenFileManager }: FilePreviewPanelProps) {
+export function FilePreviewPanel({ files, activeFileId, onChangeActiveFile, onClose, onOpenFileManager, hideDocSwitcher }: FilePreviewPanelProps) {
   if (activeFileId === '__comparison__' && files.length >= 2) {
     return <ComparisonView files={files} onClose={onClose} onOpenFileManager={onOpenFileManager} />;
   }
@@ -238,6 +239,7 @@ export function FilePreviewPanel({ files, activeFileId, onChangeActiveFile, onCl
       onChangeActiveFile={onChangeActiveFile}
       onClose={onClose}
       onOpenFileManager={onOpenFileManager}
+      hideDocSwitcher={hideDocSwitcher}
     />
   );
 }
@@ -250,6 +252,7 @@ function SingleDocView({
   onChangeActiveFile,
   onClose,
   onOpenFileManager,
+  hideDocSwitcher,
 }: {
   files: PreviewFile[];
   activeFile: PreviewFile;
@@ -257,6 +260,7 @@ function SingleDocView({
   onChangeActiveFile: (id: string) => void;
   onClose: () => void;
   onOpenFileManager?: () => void;
+  hideDocSwitcher?: boolean;
 }) {
   const [zoom, setZoom] = useState(100);
   const [currentPage, setCurrentPage] = useState(0);
@@ -300,12 +304,14 @@ function SingleDocView({
       <div className="flex items-center justify-between border-b border-stone-100 bg-white px-2 min-h-[42px] gap-1">
         {/* Left section: doc switch + sidebar toggle + page nav */}
         <div className="flex items-center gap-0.5">
-          {/* Document switcher */}
-          <DocSwitcher
-            files={files}
-            activeFileId={activeFileId}
-            onSelect={onChangeActiveFile}
-          />
+          {/* Document switcher — hidden when file list panel is open */}
+          {!hideDocSwitcher && (
+            <DocSwitcher
+              files={files}
+              activeFileId={activeFileId}
+              onSelect={onChangeActiveFile}
+            />
+          )}
           
           {/* Page indicator */}
           {totalPages > 1 && (
