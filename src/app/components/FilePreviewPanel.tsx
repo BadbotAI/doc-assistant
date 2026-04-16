@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
-import { X, FileText, FileSpreadsheet, File, Image, Braces, FileCode, Database, FolderOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Download, PanelLeftClose, PanelLeft, List, LayoutGrid, ChevronDown } from 'lucide-react';
+import { X, FileText, FileSpreadsheet, File, Image, Braces, FileCode, Database, FolderOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Maximize, Download, ChevronDown } from 'lucide-react';
 import { DocumentPreview } from '@/app/components/DocumentPreview';
 import type { DocumentAnnotation } from '@/app/components/DocumentPreview';
 
@@ -92,21 +92,6 @@ function getPages(previewContent: any, fileType: string): { title: string; secti
   return pages.length > 0 ? pages : [{ title: currentTitle, sections }];
 }
 
-/** Generate outline entries from headings */
-function getOutline(previewContent: any): { label: string; pageIndex: number }[] {
-  if (!previewContent?.sections) return [];
-  const sections = previewContent.sections;
-  const SECTIONS_PER_PAGE = 5;
-  const entries: { label: string; pageIndex: number }[] = [];
-  
-  sections.forEach((s: any, idx: number) => {
-    if (s.type === 'heading' || s.type === 'subheading') {
-      entries.push({ label: s.content, pageIndex: Math.floor(idx / SECTIONS_PER_PAGE) });
-    }
-  });
-  return entries;
-}
-
 /* ── ToolbarButton ── */
 function ToolbarBtn({ onClick, title, children, className = '' }: { onClick?: () => void; title?: string; children: React.ReactNode; className?: string }) {
   return (
@@ -116,51 +101,6 @@ function ToolbarBtn({ onClick, title, children, className = '' }: { onClick?: ()
       className={`w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors ${className}`}
     >
       {children}
-    </button>
-  );
-}
-
-/* ── Page Thumbnail ── */
-function PageThumbnail({
-  page,
-  pageIndex,
-  isActive,
-  onClick,
-}: {
-  page: { title: string; sections: any[] };
-  pageIndex: number;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex flex-col items-center gap-1 group cursor-pointer`}
-    >
-      <div className={`w-[72px] h-[96px] rounded-md border-2 transition-all duration-150 bg-white flex flex-col p-1.5 overflow-hidden ${
-        isActive ? 'border-primary shadow-sm shadow-primary/10' : 'border-stone-200 group-hover:border-stone-300'
-      }`}>
-        {/* Mini preview lines */}
-        {page.sections.slice(0, 6).map((s: any, i: number) => (
-          <div key={i} className="flex flex-col gap-[2px] mb-[2px]">
-            {s.type === 'heading' ? (
-              <div className="h-[4px] bg-stone-400 rounded-full w-[80%]" />
-            ) : s.type === 'subheading' ? (
-              <div className="h-[3px] bg-stone-300 rounded-full w-[65%]" />
-            ) : s.type === 'table' ? (
-              <div className="h-[8px] border border-stone-200 rounded-sm bg-stone-50" />
-            ) : (
-              <>
-                <div className="h-[2px] bg-stone-200 rounded-full w-full" />
-                <div className="h-[2px] bg-stone-200 rounded-full w-[90%]" />
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-      <span className={`text-[10px] tabular-nums ${isActive ? 'text-primary font-medium' : 'text-stone-400'}`}>
-        {pageIndex + 1}
-      </span>
     </button>
   );
 }
@@ -319,14 +259,11 @@ function SingleDocView({
   onOpenFileManager?: () => void;
 }) {
   const [zoom, setZoom] = useState(100);
-  const [showSidebar, setShowSidebar] = useState(false);
-  const [sidebarMode, setSidebarMode] = useState<'thumbnail' | 'outline'>('thumbnail');
   const [currentPage, setCurrentPage] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Derive pages and outline from active file
+  // Derive pages from active file
   const pages = useMemo(() => getPages(activeFile.previewContent, activeFile.type), [activeFile]);
-  const outline = useMemo(() => getOutline(activeFile.previewContent), [activeFile]);
   const totalPages = pages.length;
 
   // Reset page when file changes
@@ -370,16 +307,6 @@ function SingleDocView({
             onSelect={onChangeActiveFile}
           />
           
-          <div className="w-px h-4 bg-stone-150 mx-0.5" />
-
-          {/* Sidebar toggle */}
-          <ToolbarBtn
-            onClick={() => setShowSidebar(!showSidebar)}
-            title={showSidebar ? '隐藏侧边栏' : '显示侧边'}
-          >
-            {showSidebar ? <PanelLeftClose className="w-3.5 h-3.5" /> : <PanelLeft className="w-3.5 h-3.5" />}
-          </ToolbarBtn>
-
           {/* Page indicator */}
           {totalPages > 1 && (
             <div className="flex items-center gap-0.5 ml-1">
@@ -429,64 +356,6 @@ function SingleDocView({
 
       {/* ── Main Area: sidebar + document ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Navigation Sidebar */}
-        {showSidebar && (
-          <div className="w-[130px] flex-shrink-0 border-r border-stone-100 bg-stone-50/60 flex flex-col overflow-hidden">
-            {/* Sidebar mode toggle */}
-            <div className="flex items-center border-b border-stone-100 px-2 py-1.5 gap-0.5">
-              <button
-                onClick={() => setSidebarMode('thumbnail')}
-                className={`flex-1 flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-medium transition-colors ${
-                  sidebarMode === 'thumbnail' ? 'bg-white text-stone-700 shadow-sm border border-stone-200' : 'text-stone-400 hover:text-stone-600'
-                }`}
-              >
-                <LayoutGrid className="w-3 h-3" />
-              </button>
-              <button
-                onClick={() => setSidebarMode('outline')}
-                className={`flex-1 flex items-center justify-center gap-1 py-1 rounded-md text-[10px] font-medium transition-colors ${
-                  sidebarMode === 'outline' ? 'bg-white text-stone-700 shadow-sm border border-stone-200' : 'text-stone-400 hover:text-stone-600'
-                }`}
-              >
-                <List className="w-3 h-3" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
-              {sidebarMode === 'thumbnail' ? (
-                pages.map((page, idx) => (
-                  <PageThumbnail
-                    key={idx}
-                    page={page}
-                    pageIndex={idx}
-                    isActive={currentPage === idx}
-                    onClick={() => setCurrentPage(idx)}
-                  />
-                ))
-              ) : (
-                outline.length > 0 ? (
-                  outline.map((entry, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentPage(entry.pageIndex)}
-                      className={`w-full text-left px-2 py-1.5 rounded-lg text-[11px] leading-snug transition-colors ${
-                        currentPage === entry.pageIndex
-                          ? 'bg-accent text-primary font-medium'
-                          : 'text-stone-500 hover:bg-stone-100 hover:text-stone-700'
-                      }`}
-                    >
-                      {entry.label}
-                    </button>
-                  ))
-                ) : (
-                  <div className="text-[11px] text-stone-400 text-center py-4">暂无大纲</div>
-                )
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Document Preview */}
         <div className="flex-1 overflow-hidden" ref={contentRef}>
           <DocumentPreview

@@ -10,7 +10,9 @@ import {
   MessageSquare,
   File,
   Clock,
-  Home
+  Home,
+  MoreHorizontal,
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
@@ -20,6 +22,7 @@ interface Conversation {
   title: string;
   timestamp: string;
   date: Date;
+  isFavorited?: boolean;
 }
 
 interface SidebarDocument {
@@ -34,6 +37,7 @@ interface ConversationSidebarProps {
   onNewConversation: () => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
+  onToggleFavorite: (id: string) => void;
   onOpenFileManager: () => void;
   onSelectAgent: (agentType: string) => void;
   hidden?: boolean;
@@ -47,6 +51,7 @@ export function ConversationSidebar({
   onNewConversation,
   onSelectConversation,
   onDeleteConversation,
+  onToggleFavorite,
   onOpenFileManager,
   hidden,
   documents = [],
@@ -55,6 +60,7 @@ export function ConversationSidebar({
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchTab, setSearchTab] = useState<'conversations' | 'files'>('conversations');
+  const [moreMenuId, setMoreMenuId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredConversations = searchQuery.trim()
@@ -340,36 +346,89 @@ export function ConversationSidebar({
         {/* Conversations List — hidden when collapsed */}
         {!isCollapsed ? (
           <div className="flex-1 overflow-y-auto px-2.5 pt-5 sidebar-scroll">
+            {/* Favorited conversations */}
+            {conversations.filter(c => c.isFavorited).length > 0 && (
+              <>
+                <div className="px-3 pb-2">
+                  <span className="text-[12px] text-white/30 tracking-wide flex items-center gap-1.5">
+                    <Star className="w-3 h-3" />收藏对话
+                  </span>
+                </div>
+                <div className="space-y-0.5 pb-4">
+                  {conversations.filter(c => c.isFavorited).map((conversation) => {
+                    const isActive = activeConversationId === conversation.id;
+                    return (
+                      <div
+                        key={`fav-${conversation.id}`}
+                        className={`group/conv relative flex items-center px-3 py-[9px] rounded-lg cursor-pointer transition-colors duration-150 ${isActive ? 'bg-white/12 text-white' : 'text-white/50 hover:bg-white/7 hover:text-white/75'}`}
+                        onClick={() => onSelectConversation(conversation.id)}
+                      >
+                        <span className={`text-[13px] truncate flex-1 min-w-0 ${isActive ? 'text-white/95' : ''}`}>{conversation.title}</span>
+                        <span className="text-[10px] text-white/20 flex-shrink-0 tabular-nums ml-1 group-hover/conv:hidden">{conversation.timestamp}</span>
+                        <div className="relative hidden group-hover/conv:flex flex-shrink-0 ml-1">
+                          <button
+                            className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setMoreMenuId(moreMenuId === conversation.id ? null : conversation.id); }}
+                          >
+                            <MoreHorizontal className="w-3.5 h-3.5 text-white/40" />
+                          </button>
+                          {moreMenuId === conversation.id && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setMoreMenuId(null)} />
+                              <div className="absolute right-0 top-6 w-32 bg-[#2a2d38] rounded-lg border border-white/10 shadow-xl z-50 py-1">
+                                <button className="w-full px-3 py-2 text-left text-[12px] text-amber-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onToggleFavorite(conversation.id); setMoreMenuId(null); }}>
+                                  <Star className="w-3 h-3" />取消收藏
+                                </button>
+                                <button className="w-full px-3 py-2 text-left text-[12px] text-red-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onDeleteConversation(conversation.id); setMoreMenuId(null); }}>
+                                  <Trash2 className="w-3 h-3" />删除
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Recent conversations */}
             <div className="px-3 pb-2">
               <span className="text-[12px] text-white/30 tracking-wide">最近对话</span>
             </div>
             <div className="space-y-0.5 pb-3">
-              {conversations.map((conversation) => {
+              {conversations.filter(c => !c.isFavorited).map((conversation) => {
                 const isActive = activeConversationId === conversation.id;
                 return (
                   <div
                     key={conversation.id}
-                    className={`
-                      group/conv relative flex items-center px-3 py-[9px] rounded-lg cursor-pointer
-                      transition-colors duration-150
-                      ${isActive
-                        ? 'bg-white/12 text-white'
-                        : 'text-white/50 hover:bg-white/7 hover:text-white/75'
-                      }
-                    `}
+                    className={`group/conv relative flex items-center px-3 py-[9px] rounded-lg cursor-pointer transition-colors duration-150 ${isActive ? 'bg-white/12 text-white' : 'text-white/50 hover:bg-white/7 hover:text-white/75'}`}
                     onClick={() => onSelectConversation(conversation.id)}
                   >
                     <span className={`text-[13px] truncate flex-1 min-w-0 ${isActive ? 'text-white/95' : ''}`}>{conversation.title}</span>
                     <span className="text-[10px] text-white/20 flex-shrink-0 tabular-nums ml-1 group-hover/conv:hidden">{conversation.timestamp}</span>
-                    <button
-                      className="hidden group-hover/conv:flex flex-shrink-0 w-5 h-5 items-center justify-center rounded-md hover:bg-white/10 transition-colors ml-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteConversation(conversation.id);
-                      }}
-                    >
-                      <Trash2 className="w-3 h-3 text-white/40 hover:text-red-400 transition-colors" />
-                    </button>
+                    <div className="relative hidden group-hover/conv:flex flex-shrink-0 ml-1">
+                      <button
+                        className="w-5 h-5 flex items-center justify-center rounded-md hover:bg-white/10 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); setMoreMenuId(moreMenuId === conversation.id ? null : conversation.id); }}
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5 text-white/40" />
+                      </button>
+                      {moreMenuId === conversation.id && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setMoreMenuId(null)} />
+                          <div className="absolute right-0 top-6 w-32 bg-[#2a2d38] rounded-lg border border-white/10 shadow-xl z-50 py-1">
+                            <button className="w-full px-3 py-2 text-left text-[12px] text-amber-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onToggleFavorite(conversation.id); setMoreMenuId(null); }}>
+                              <Star className="w-3 h-3" />收藏
+                            </button>
+                            <button className="w-full px-3 py-2 text-left text-[12px] text-red-400 hover:bg-white/8 flex items-center gap-2" onClick={(e) => { e.stopPropagation(); onDeleteConversation(conversation.id); setMoreMenuId(null); }}>
+                              <Trash2 className="w-3 h-3" />删除
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 );
               })}

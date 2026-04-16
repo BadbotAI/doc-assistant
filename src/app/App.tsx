@@ -23,6 +23,7 @@ interface Conversation {
   date: Date;
   messages: Message[];
   documents: Document[];
+  isFavorited?: boolean;
 }
 
 function generateId(): string {
@@ -903,6 +904,12 @@ export default function App() {
     }
   };
 
+  const handleToggleFavorite = (id: string) => {
+    setConversations(prev =>
+      prev.map(c => c.id === id ? { ...c, isFavorited: !c.isFavorited } : c)
+    );
+  };
+
   const handleSendMessage = async (message: string, agentType: AgentType, attachments?: MessageAttachment[]) => {
     // 重置退出文档模式标志
     setHasExitedDocumentMode(false);
@@ -1343,6 +1350,7 @@ export default function App() {
         onNewConversation={handleNewConversation}
         onSelectConversation={handleSelectConversation}
         onDeleteConversation={handleDeleteConversation}
+        onToggleFavorite={handleToggleFavorite}
         onOpenFileManager={() => setShowFileManager(true)}
         onSelectAgent={handleSelectAgent}
         hidden={!!filePreviewPanel || !!documentChatMode || showFileManager}

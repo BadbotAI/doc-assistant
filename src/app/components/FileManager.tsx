@@ -31,6 +31,8 @@ const conversationTitles: Record<string, string> = {
   '4': '数据分析表校验',
   '5': '会议记录整理建议',
   '6': '产品界面设计分析',
+  '7': 'Q1市场营销策略制定',
+  '8': '系统架构技术评审',
 };
 
 export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onSelectConversation }: FileManagerProps) {
@@ -43,7 +45,6 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
   const [fileTypeFilter, setFileTypeFilter] = useState<Set<string>>(new Set());
   const [showFileTypeMenu, setShowFileTypeMenu] = useState(false);
   const [groupByConversation, setGroupByConversation] = useState(false);
-  const [expandedStacks, setExpandedStacks] = useState<Set<string>>(new Set());
 
   // 模拟的文件数据
   const mockFiles: FileItem[] = [
@@ -273,6 +274,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
       timestamp: new Date('2026-01-26 11:00'),
       thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=300&h=200&fit=crop',
       lastUsed: new Date('2026-01-27 09:00'),
+      conversationId: '6',
       previewContent: {
         title: '用户界面设计',
         sections: [
@@ -296,6 +298,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
       uploadDate: '2026-01-25',
       timestamp: new Date('2026-01-25 14:20'),
       lastUsed: new Date('2026-01-26 16:00'),
+      conversationId: '3',
       previewContent: {
         slides: [
           { title: '用户调研报告', subtitle: '2024年度企业用户AI工具使用情况调研', type: 'cover' },
@@ -314,6 +317,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
       uploadDate: '2026-01-20',
       timestamp: new Date('2026-01-20 10:30'),
       lastUsed: new Date('2026-01-25 13:00'),
+      conversationId: '7',
       previewContent: {
         title: 'Q1市场营销方案',
         sections: [
@@ -389,6 +393,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
       uploadDate: '2026-01-27',
       timestamp: new Date('2026-01-27 16:00'),
       lastUsed: new Date('2026-01-28 11:30'),
+      conversationId: '8',
       previewContent: `# 应用配置文件
 app:
   name: "智能对话助手"
@@ -417,6 +422,7 @@ redis:
       uploadDate: '2026-01-26',
       timestamp: new Date('2026-01-26 10:30'),
       lastUsed: new Date('2026-01-27 15:00'),
+      conversationId: '8',
       previewContent: `<?xml version="1.0" encoding="UTF-8"?>
 <database name="ai_assistant" version="2.1">
   <table name="users">
@@ -444,6 +450,7 @@ redis:
       uploadDate: '2026-01-25',
       timestamp: new Date('2026-01-25 08:00'),
       lastUsed: new Date('2026-01-26 14:00'),
+      conversationId: '4',
       previewContent: {
         schema: [
           { name: 'user_id', type: 'INT64' },
@@ -762,12 +769,12 @@ redis:
                   )}
                 </div>
 
-                <Button variant="outline" size="sm" className={`rounded-lg text-xs ${groupByConversation ? 'text-primary border-primary/30 bg-primary/5' : 'text-muted-foreground border-border'}`} onClick={() => { setGroupByConversation(!groupByConversation); setExpandedStacks(new Set()); }} title="按对话分组">
+                <Button variant="outline" size="sm" className={`rounded-lg text-xs ${groupByConversation ? 'text-primary border-primary/30 bg-primary/5' : 'text-muted-foreground border-border'}`} onClick={() => setGroupByConversation(!groupByConversation)} title="按对话分组">
                   <Layers className="w-3 h-3" />{!previewFile && <span className="ml-1">{groupByConversation ? '取消分组' : '按对话分组'}</span>}
                 </Button>
 
                 <Button variant="outline" size="sm" className={`rounded-lg text-xs ${isSelectionMode ? 'text-primary border-primary/30 bg-primary/5' : 'text-muted-foreground border-border'}`} onClick={() => isSelectionMode ? exitSelectionMode() : setIsSelectionMode(true)} title="批量管理">
-                  <CheckSquare className="w-3 h-3" />{!previewFile && <span className="ml-1">创建新对话</span>}
+                  <CheckSquare className="w-3 h-3" />{!previewFile && <span className="ml-1">选择文件创建新对话</span>}
                 </Button>
               </div>
             </div>
@@ -776,113 +783,38 @@ redis:
               <div className="px-8 py-5">
                 {sortedAllFiles.length > 0 ? (
                   groupByConversation ? (
-                    // === Procreate-style conversation stacking ===
+                    // === Conversation grouped view ===
                     (() => {
                       const { grouped, ungrouped } = buildConversationStacks(sortedAllFiles);
                       return (
-                        <div className="space-y-6">
+                        <div className="space-y-8">
                           {Array.from(grouped.entries()).map(([convId, files]) => {
-                            const isExpanded = expandedStacks.has(convId);
                             const title = conversationTitles[convId] || `对话 ${convId}`;
                             return (
                               <div key={convId}>
                                 <div className="flex items-center gap-2 mb-3">
-                                  <button
-                                    onClick={() => {
-                                      const next = new Set(expandedStacks);
-                                      if (next.has(convId)) next.delete(convId); else next.add(convId);
-                                      setExpandedStacks(next);
-                                    }}
-                                    className="flex items-center gap-2 text-[12px] font-medium text-foreground hover:text-primary transition-colors"
-                                  >
-                                    <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
-                                    <span>{title}</span>
-                                    <span className="text-[10.5px] text-muted-foreground font-normal">({files.length})</span>
-                                    <svg className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                                  </button>
+                                  <MessageSquare className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-[13px] font-medium text-foreground flex-1 truncate">{title}</span>
+                                  <span className="text-[11px] text-muted-foreground mr-1">{files.length} 个文件</span>
                                   {onSelectConversation && (
                                     <button
                                       onClick={() => { onSelectConversation(convId); onBack(); }}
-                                      className="text-[11px] text-primary hover:text-primary/80 transition-colors"
+                                      className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 hover:bg-primary/8 px-2 py-1 rounded-md transition-colors flex-shrink-0"
                                     >
                                       <ArrowUpRight className="w-3 h-3" />
+                                      <span>跳转到对话</span>
                                     </button>
                                   )}
                                 </div>
-                                {isExpanded ? (
-                                  <div className={previewFile
-                                    ? "grid grid-cols-2 gap-3"
-                                    : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-                                  }>
-                                    {files.map(renderFileGridCard)}
-                                  </div>
-                                ) : (
-                                  <div
-                                    className="relative cursor-pointer group/stack"
-                                    style={{ height: '110px' }}
-                                    onClick={() => {
-                                      const next = new Set(expandedStacks);
-                                      next.add(convId);
-                                      setExpandedStacks(next);
-                                    }}
-                                  >
-                                    {files.slice(0, 3).map((file, i) => {
-                                      const typeInfo = getFileTypeInfo(file.type);
-                                      const FileIcon = typeInfo.icon;
-                                      const offset = i * 8;
-                                      const zIndex = 3 - i;
-                                      return (
-                                        <div
-                                          key={file.id}
-                                          className="absolute rounded-lg border border-border bg-white shadow-sm overflow-hidden transition-transform duration-200"
-                                          style={{
-                                            left: `${offset}px`,
-                                            top: `${offset}px`,
-                                            width: '140px',
-                                            height: '90px',
-                                            zIndex,
-                                            opacity: 1 - i * 0.15,
-                                          }}
-                                        >
-                                          {i === 0 ? (
-                                            <div className="w-full h-full flex flex-col">
-                                              <div className={`flex-1 flex items-center justify-center ${typeInfo.color}`}>
-                                                <FileIcon className="w-6 h-6" />
-                                              </div>
-                                              <div className="px-2 py-1.5 bg-white border-t border-border">
-                                                <p className="text-[10px] text-foreground truncate">{file.name}</p>
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            <div className={`w-full h-full ${typeInfo.color} opacity-60`} />
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                    {files.length > 1 && (
-                                      <div
-                                        className="absolute bg-primary text-white text-[10px] font-semibold rounded-full w-5 h-5 flex items-center justify-center shadow-sm"
-                                        style={{ left: '128px', top: '0px', zIndex: 10 }}
-                                      >
-                                        {files.length}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                <div className={previewFile
+                                  ? "grid grid-cols-2 gap-3"
+                                  : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                                }>
+                                  {files.map(renderFileGridCard)}
+                                </div>
                               </div>
                             );
                           })}
-                          {ungrouped.length > 0 && (
-                            <div>
-                              <h3 className="text-[11px] font-medium text-muted-foreground mb-4 uppercase tracking-wider">未关联对话</h3>
-                              <div className={previewFile
-                                ? "grid grid-cols-2 gap-3"
-                                : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-                              }>
-                                {ungrouped.map(renderFileGridCard)}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })()
