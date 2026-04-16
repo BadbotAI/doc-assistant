@@ -798,7 +798,7 @@ redis:
                                 >
                                   <MessageSquare className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                                   <span className="text-[13px] font-medium text-foreground flex-1 truncate group-hover:text-primary transition-colors">{title}</span>
-                                  <ArrowUpRight className="w-3.5 h-3.5 text-primary opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                  <span className="text-[11px] text-primary opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 whitespace-nowrap">跳转到对话</span>
                                 </button>
                                 <div className={previewFile
                                   ? "grid grid-cols-2 gap-3"
