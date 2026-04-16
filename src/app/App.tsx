@@ -1498,7 +1498,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="flex-1 flex flex-col items-center justify-start pt-[22vh] bg-white overflow-y-auto"
+            className="flex-1 flex flex-col items-center justify-center bg-white overflow-y-auto"
           >
             <div className="w-full max-w-[960px] flex flex-col items-center px-8">
               {/* Greeting */}
