@@ -792,20 +792,14 @@ redis:
                             const title = conversationTitles[convId] || `对话 ${convId}`;
                             return (
                               <div key={convId}>
-                                <div className="flex items-center gap-2 mb-3">
+                                <button
+                                  className="w-full flex items-center gap-2 mb-3 px-2 py-1.5 -mx-2 rounded-lg group hover:bg-accent/60 transition-colors text-left"
+                                  onClick={() => { if (onSelectConversation) { onSelectConversation(convId); onBack(); } }}
+                                >
                                   <MessageSquare className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-[13px] font-medium text-foreground flex-1 truncate">{title}</span>
-                                  <span className="text-[11px] text-muted-foreground mr-1">{files.length} 个文件</span>
-                                  {onSelectConversation && (
-                                    <button
-                                      onClick={() => { onSelectConversation(convId); onBack(); }}
-                                      className="inline-flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 hover:bg-primary/8 px-2 py-1 rounded-md transition-colors flex-shrink-0"
-                                    >
-                                      <ArrowUpRight className="w-3 h-3" />
-                                      <span>跳转到对话</span>
-                                    </button>
-                                  )}
-                                </div>
+                                  <span className="text-[13px] font-medium text-foreground flex-1 truncate group-hover:text-primary transition-colors">{title}</span>
+                                  <ArrowUpRight className="w-3.5 h-3.5 text-primary opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                </button>
                                 <div className={previewFile
                                   ? "grid grid-cols-2 gap-3"
                                   : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
