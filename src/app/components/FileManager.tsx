@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Upload, FileText, File, Image, Search, CheckSquare, Trash2, X, Filter, Check, MessageSquare, Eye, Clock, FileSpreadsheet, FileCode, Database, Braces, FolderOpen, Plus, ArrowUpRight, ArrowUpDown, Presentation, FileType } from 'lucide-react';
+import { ArrowLeft, FileText, File, Image, Search, CheckSquare, X, Filter, Check, MessageSquare, Eye, Clock, FileSpreadsheet, FileCode, Database, Braces, Plus, ArrowUpRight, ArrowUpDown, Presentation, FileType, Layers } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { ScrollArea } from '@/app/components/ui/scroll-area';
 import { DocumentPreview } from '@/app/components/DocumentPreview';
@@ -22,15 +22,7 @@ interface FileItem {
   lastUsed?: Date;
   conversationId?: string;
   previewContent?: any;
-}
-
-interface ConversationFolder {
-  conversationId: string;
-  title: string;
-  fileCount: number;
-  files: FileItem[];
-  lastModified: Date;
-  fileTypes: string[];
+  isAiGenerated?: boolean;
 }
 
 const conversationTitles: Record<string, string> = {
@@ -50,10 +42,8 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [fileTypeFilter, setFileTypeFilter] = useState<Set<string>>(new Set());
   const [showFileTypeMenu, setShowFileTypeMenu] = useState(false);
-  const [activeTab, setActiveTab] = useState<'topics' | 'files'>('files');
-  const [activeFolder, setActiveFolder] = useState<ConversationFolder | null>(null);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [groupByConversation, setGroupByConversation] = useState(false);
+  const [expandedStacks, setExpandedStacks] = useState<Set<string>>(new Set());
 
   // 模拟的文件数据
   const mockFiles: FileItem[] = [
@@ -106,6 +96,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
     {
       id: '1c',
       name: '审计意见函.pdf',
+      isAiGenerated: true,
       type: 'pdf',
       size: '680 KB',
       uploadDate: '2026-01-29',
@@ -129,6 +120,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
     {
       id: '1d',
       name: '关联交易明细.docx',
+      isAiGenerated: true,
       type: 'docx',
       size: '320 KB',
       uploadDate: '2026-01-29',
@@ -298,6 +290,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
     {
       id: '7',
       name: '用户调研报告.pptx',
+      isAiGenerated: true,
       type: 'pptx',
       size: '5.6 MB',
       uploadDate: '2026-01-25',
@@ -343,6 +336,7 @@ export function FileManager({ onBack, onAnalyzeFile, onAnalyzeMultipleFiles, onS
     {
       id: '9',
       name: 'api配置.json',
+      isAiGenerated: true,
       type: 'json',
       size: '45 KB',
       uploadDate: '2026-01-29',
@@ -475,38 +469,23 @@ redis:
     },
   ];
 
-  // 构建对话文件夹
-  const buildFolders = (): { folders: ConversationFolder[]; ungroupedFiles: FileItem[] } => {
-    const folderMap = new Map<string, FileItem[]>();
+  // 构建对话分组 (Procreate 风格堆叠)
+  const buildConversationStacks = (files: FileItem[]) => {
+    const grouped = new Map<string, FileItem[]>();
     const ungrouped: FileItem[] = [];
-    mockFiles.forEach(file => {
+    files.forEach(file => {
       if (file.conversationId) {
-        const existing = folderMap.get(file.conversationId) || [];
-        existing.push(file);
-        folderMap.set(file.conversationId, existing);
+        const group = grouped.get(file.conversationId) || [];
+        group.push(file);
+        grouped.set(file.conversationId, group);
       } else {
         ungrouped.push(file);
       }
     });
-    const folders: ConversationFolder[] = Array.from(folderMap.entries()).map(([convId, files]) => {
-      const latestDate = files.reduce((latest, f) => {
-        const d = f.lastUsed || f.timestamp;
-        return d > latest ? d : latest;
-      }, new Date(0));
-      const types = Array.from(new Set(files.map(f => f.type)));
-      return { conversationId: convId, title: conversationTitles[convId] || `对话 ${convId}`, fileCount: files.length, files, lastModified: latestDate, fileTypes: types };
-    });
-    folders.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
-    return { folders, ungroupedFiles: ungrouped };
+    return { grouped, ungrouped };
   };
 
-  const { folders } = buildFolders();
   const allFiles = mockFiles;
-
-  const filteredFolders = folders.filter(folder => {
-    return folder.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      folder.files.some(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  });
 
   const filteredAllFiles = allFiles.filter(file => {
     const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -566,10 +545,6 @@ redis:
     setSelectedFiles(newSelected);
   };
 
-  const handleDelete = () => { setSelectedFiles(new Set()); setIsSelectionMode(false); };
-
-  const handleDeleteSingleFile = (fileId: string, e: React.MouseEvent) => { e.stopPropagation(); };
-
   const handleAnalyzeSelected = () => {
     if (selectedFiles.size === 0) return;
     const selectedFilesList = mockFiles.filter(f => selectedFiles.has(f.id));
@@ -601,31 +576,6 @@ redis:
   };
 
   const fileTypes = Array.from(new Set(mockFiles.map(f => f.type)));
-
-  const formatFolderDate = (date: Date) => {
-    const now = new Date('2026-01-29T18:00:00');
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    if (diffHours < 1) return '刚刚';
-    if (diffHours < 24) return `${diffHours}小时前`;
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays === 1) return '昨天';
-    if (diffDays < 7) return `${diffDays}天前`;
-    return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
-  };
-
-  const activeFolderFiles = activeFolder ? activeFolder.files.filter(file => file.name.toLowerCase().includes(searchQuery.toLowerCase())) : [];
-
-  // === 统一"继续对话"按钮 ===
-  const ContinueChatButton = ({ onClick, label = '继续对话', className = '' }: { onClick: (e: React.MouseEvent) => void; label?: string; className?: string }) => (
-    <button
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11.5px] font-medium text-primary hover:text-primary/80 bg-primary/8 hover:bg-primary/12 transition-all duration-150 ${className}`}
-    >
-      <ArrowUpRight className="w-3 h-3" />
-      <span>{label}</span>
-    </button>
-  );
 
   // === 渲染文件网格卡片 ===
 
@@ -664,22 +614,23 @@ redis:
             {file.type.toUpperCase()}
           </div>
 
-          {!isSelectionMode && (
+          {file.isAiGenerated && (
+            <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded text-[9px] font-semibold tracking-wide bg-violet-500 text-white">
+              AI
+            </div>
+          )}
+
+          {!isSelectionMode && file.conversationId && (
             <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-              {file.conversationId && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onSelectConversation) { onSelectConversation(file.conversationId!); onBack(); }
-                  }}
-                  className="bg-white/95 hover:bg-white text-primary w-6 h-6 flex items-center justify-center shadow-sm rounded-md transition-colors"
-                  title="跳转到对话"
-                >
-                  <ArrowUpRight className="w-3 h-3" />
-                </button>
-              )}
-              <button onClick={(e) => handleDeleteSingleFile(file.id, e)} className="bg-white/95 hover:bg-white text-red-500 w-6 h-6 flex items-center justify-center shadow-sm rounded-md transition-colors" title="删除">
-                <Trash2 className="w-3 h-3" />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onSelectConversation) { onSelectConversation(file.conversationId!); onBack(); }
+                }}
+                className="bg-white/95 hover:bg-white text-primary w-6 h-6 flex items-center justify-center shadow-sm rounded-md transition-colors"
+                title="跳转到对话"
+              >
+                <ArrowUpRight className="w-3 h-3" />
               </button>
             </div>
           )}
@@ -711,7 +662,10 @@ redis:
           <FileIcon className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] text-foreground truncate group-hover/file:text-primary transition-colors">{file.name}</p>
+          <p className="text-[13px] text-foreground truncate group-hover/file:text-primary transition-colors">
+            {file.name}
+            {file.isAiGenerated && <span className="ml-1.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-violet-100 text-violet-600 align-middle">AI</span>}
+          </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">{file.size} · {file.uploadDate}</p>
         </div>
         <div className="opacity-0 group-hover/file:opacity-100 transition-opacity flex items-center gap-1.5 flex-shrink-0">
@@ -725,131 +679,6 @@ redis:
       </div>
     );
   };
-
-  // === 对话文件夹卡片 ===
-  const renderTopicCard = (folder: ConversationFolder) => {
-    const maxVisible = 3;
-    const visibleFiles = folder.files.slice(0, maxVisible);
-    const remainingCount = Math.max(0, folder.files.length - maxVisible);
-    return (
-      <div key={folder.conversationId} className="group cursor-pointer rounded-xl border border-border bg-white hover:border-primary/30 hover:shadow-sm transition-all duration-200 overflow-hidden flex flex-col h-[220px]"
-        onClick={() => { setActiveFolder(folder); setSearchQuery(''); }}>
-        <div className="px-4 pt-4 pb-2.5 flex items-start gap-2 flex-shrink-0 bg-primary/[0.03] rounded-t-xl">
-          <div className="flex-1 min-w-0">
-            <p className="text-[14px] font-semibold text-foreground truncate leading-snug group-hover:text-primary transition-colors">{folder.title}</p>
-            <p className="text-[12px] text-muted-foreground mt-1 flex items-center gap-1.5">
-              <span className="inline-flex items-center gap-1"><FileText className="w-3 h-3" />{folder.fileCount}</span><span className="text-border">·</span><span>{formatFolderDate(folder.lastModified)}</span>
-            </p>
-          </div>
-          <div className="w-7 h-7 rounded-lg bg-white border border-border/60 shadow-sm group-hover:bg-primary/10 group-hover:border-primary/20 flex items-center justify-center flex-shrink-0 transition-colors"
-            onClick={(e) => { e.stopPropagation(); if (onSelectConversation) { onSelectConversation(folder.conversationId); onBack(); } }}
-            title="进入对话">
-            <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-          </div>
-        </div>
-        <div className="relative flex-1 px-3 py-2 space-y-0.5 min-h-0 overflow-hidden">
-          {visibleFiles.map((file) => {
-            const typeInfo = getFileTypeInfo(file.type);
-            const FileIcon = typeInfo.icon;
-            return (
-              <div key={file.id} className="flex items-center gap-2.5 py-[6px] px-2 rounded-md">
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${typeInfo.color}`}><FileIcon className="w-3 h-3" /></div>
-                <span className="text-[12.5px] text-muted-foreground truncate flex-1 min-w-0">{file.name}</span>
-                <span className="text-[11px] text-muted-foreground/50 flex-shrink-0 tabular-nums">{file.size}</span>
-              </div>
-            );
-          })}
-          {remainingCount > 0 && (
-            <div className="absolute bottom-0 left-0 right-0 h-[44px] bg-gradient-to-t from-stone-100 via-stone-50 to-transparent flex items-end justify-center pb-2.5">
-              <span className="text-[11px] font-semibold text-stone-400">+{remainingCount}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  // === 文件夹详情 ===
-  if (activeFolder) {
-    return (
-      <div className="flex-1 flex h-screen overflow-hidden">
-        <div className={`flex flex-col bg-white overflow-hidden ${previewFile ? 'flex-[1] max-w-[480px]' : 'flex-1'}`}>
-          {/* Header */}
-          <div className="border-b border-border bg-white px-5 h-[48px] flex items-center gap-3 flex-shrink-0">
-            <button onClick={() => { setActiveFolder(null); setSearchQuery(''); setPreviewFile(null); }} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-1.5 text-sm min-w-0 flex-1">
-              <button onClick={() => { setActiveFolder(null); setSearchQuery(''); setPreviewFile(null); }} className="text-muted-foreground hover:text-primary transition-colors flex-shrink-0 text-[13px]">对话文件夹</button>
-              <span className="text-muted-foreground/40 flex-shrink-0">/</span>
-              <span className="text-[13px] font-medium text-foreground truncate">{activeFolder.title}</span>
-              <span className="text-[12px] text-muted-foreground flex-shrink-0">({activeFolder.fileCount})</span>
-            </div>
-            <ContinueChatButton label="继续对话" onClick={() => { if (onSelectConversation) { onSelectConversation(activeFolder.conversationId); onBack(); } }} />
-          </div>
-
-          {/* Search */}
-          <div className="px-5 py-3">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <input type="text" placeholder="在此对话中搜索文档..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px] bg-white" />
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="px-5 py-4">
-              {activeFolderFiles.length > 0 ? (
-                <div className="space-y-0.5">{activeFolderFiles.map(renderFolderFileRow)}</div>
-              ) : (
-                <div className="flex items-center justify-center h-64">
-                  <div className="text-center space-y-3">
-                    <div className="w-12 h-12 mx-auto bg-secondary rounded-xl flex items-center justify-center"><FileText className="w-6 h-6 text-muted-foreground/40" /></div>
-                    <p className="text-[13px] text-muted-foreground">{searchQuery ? '未找到匹配的文档' : '此对话暂无关联文档'}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-
-        {/* Preview Panel */}
-        {previewFile && (
-          <div className="flex-[2] border-l border-border flex flex-col">
-            <DocumentPreview
-              fileName={previewFile.name}
-              fileType={previewFile.type}
-              previewContent={previewFile.previewContent}
-              onClose={() => setPreviewFile(null)}
-              onOpenFileManager={() => {}}
-            />
-            {/* Preview action bar */}
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-border bg-white flex-shrink-0">
-              {activeFolder && (
-                <button
-                  onClick={() => {
-                    if (onSelectConversation) { onSelectConversation(activeFolder.conversationId); onBack(); }
-                  }}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium text-primary hover:bg-primary/8 transition-colors"
-                >
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>跳转到对话</span>
-                </button>
-              )}
-              <div className="flex-1" />
-              <button
-                onClick={() => { setPreviewFile(null); }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>删除文件</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
 
   // === 主视图 ===
   const sortedAllFiles = sortFiles(filteredAllFiles);
@@ -870,62 +699,14 @@ redis:
               <h1 className="text-[18px] font-semibold text-foreground leading-tight tracking-tight" style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>文件管理</h1>
             </div>
 
-            {/* Tabs — 全部文件在前 */}
-            <div className="flex items-center gap-0">
-              <button
-                onClick={() => { setActiveTab('files'); setSearchQuery(''); setPreviewFile(null); }}
-                className={`relative px-4 py-2.5 text-[13px] font-medium transition-colors ${activeTab === 'files' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                全部文件
-                <span className={`ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full ${activeTab === 'files' ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}>{allFiles.length}</span>
-                {activeTab === 'files' && <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary rounded-full" />}
-              </button>
-              <button
-                onClick={() => { setActiveTab('topics'); setSearchQuery(''); setFileTypeFilter(new Set()); setPreviewFile(null); }}
-                className={`relative px-4 py-2.5 text-[13px] font-medium transition-colors ${activeTab === 'topics' ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                对话文件夹
-                <span className={`ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full ${activeTab === 'topics' ? 'bg-primary/10 text-primary' : 'bg-secondary text-muted-foreground'}`}>{folders.length}</span>
-                {activeTab === 'topics' && <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-primary rounded-full" />}
-              </button>
+            <div className="pb-2">
+              <span className="text-[12px] text-muted-foreground">{allFiles.length} 个文件</span>
             </div>
           </div>
         </div>
 
-        {/* === Tab: 对话文件夹 === */}
-        {activeTab === 'topics' && (
-          <>
-            <div className="px-8 py-3 flex-shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="flex-1 relative max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-                  <input type="text" placeholder="搜索对话或文档名称..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-[13px] bg-white" />
-                </div>
-              </div>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="px-8 py-5">
-                {filteredFolders.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">{filteredFolders.map(renderTopicCard)}</div>
-                ) : (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-center space-y-3">
-                      <div className="w-14 h-14 mx-auto bg-secondary rounded-2xl flex items-center justify-center"><MessageSquare className="w-7 h-7 text-muted-foreground/30" /></div>
-                      <div>
-                        <h3 className="text-[15px] font-medium text-foreground">{searchQuery ? '未找到匹配的对话' : '暂无对话记录'}</h3>
-                        <p className="text-[13px] text-muted-foreground mt-1">{searchQuery ? '换个关键词试试' : '发起新对话后，关联文档将自动归档于此'}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </>
-        )}
-
-        {/* === Tab: 所有文件 === */}
-        {activeTab === 'files' && (
+        {/* === 文件列表 === */}
+        {(
           <>
             <div className="px-8 py-3 flex-shrink-0">
               <div className="flex items-center gap-2.5">
@@ -981,11 +762,12 @@ redis:
                   )}
                 </div>
 
+                <Button variant="outline" size="sm" className={`rounded-lg text-xs ${groupByConversation ? 'text-primary border-primary/30 bg-primary/5' : 'text-muted-foreground border-border'}`} onClick={() => { setGroupByConversation(!groupByConversation); setExpandedStacks(new Set()); }} title="按对话分组">
+                  <Layers className="w-3 h-3" />{!previewFile && <span className="ml-1">{groupByConversation ? '取消分组' : '按对话分组'}</span>}
+                </Button>
+
                 <Button variant="outline" size="sm" className={`rounded-lg text-xs ${isSelectionMode ? 'text-primary border-primary/30 bg-primary/5' : 'text-muted-foreground border-border'}`} onClick={() => isSelectionMode ? exitSelectionMode() : setIsSelectionMode(true)} title="批量管理">
                   <CheckSquare className="w-3 h-3" />{!previewFile && <span className="ml-1">创建新对话</span>}
-                </Button>
-                <Button className="bg-primary hover:bg-primary/90 text-white rounded-lg text-xs" size="sm" title="上传文件" onClick={() => setShowUploadDialog(true)}>
-                  <Upload className="w-3 h-3" />{!previewFile && <span className="ml-1">上传文件</span>}
                 </Button>
               </div>
             </div>
@@ -993,19 +775,133 @@ redis:
             <ScrollArea className="flex-1 relative">
               <div className="px-8 py-5">
                 {sortedAllFiles.length > 0 ? (
-                  Object.entries(groupedAllFiles).map(([dateLabel, filesInGroup]) => (
-                    <div key={dateLabel} className="mb-8 last:mb-0">
-                      <h3 className="text-[11px] font-medium text-muted-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <Clock className="w-3 h-3 text-muted-foreground/40" />{dateLabel}
-                      </h3>
-                      <div className={previewFile
-                        ? "grid grid-cols-2 gap-3"
-                        : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
-                      }>
-                        {filesInGroup.map(renderFileGridCard)}
+                  groupByConversation ? (
+                    // === Procreate-style conversation stacking ===
+                    (() => {
+                      const { grouped, ungrouped } = buildConversationStacks(sortedAllFiles);
+                      return (
+                        <div className="space-y-6">
+                          {Array.from(grouped.entries()).map(([convId, files]) => {
+                            const isExpanded = expandedStacks.has(convId);
+                            const title = conversationTitles[convId] || `对话 ${convId}`;
+                            return (
+                              <div key={convId}>
+                                <div className="flex items-center gap-2 mb-3">
+                                  <button
+                                    onClick={() => {
+                                      const next = new Set(expandedStacks);
+                                      if (next.has(convId)) next.delete(convId); else next.add(convId);
+                                      setExpandedStacks(next);
+                                    }}
+                                    className="flex items-center gap-2 text-[12px] font-medium text-foreground hover:text-primary transition-colors"
+                                  >
+                                    <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <span>{title}</span>
+                                    <span className="text-[10.5px] text-muted-foreground font-normal">({files.length})</span>
+                                    <svg className={`w-3 h-3 text-muted-foreground transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                  </button>
+                                  {onSelectConversation && (
+                                    <button
+                                      onClick={() => { onSelectConversation(convId); onBack(); }}
+                                      className="text-[11px] text-primary hover:text-primary/80 transition-colors"
+                                    >
+                                      <ArrowUpRight className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
+                                {isExpanded ? (
+                                  <div className={previewFile
+                                    ? "grid grid-cols-2 gap-3"
+                                    : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                                  }>
+                                    {files.map(renderFileGridCard)}
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="relative cursor-pointer group/stack"
+                                    style={{ height: '110px' }}
+                                    onClick={() => {
+                                      const next = new Set(expandedStacks);
+                                      next.add(convId);
+                                      setExpandedStacks(next);
+                                    }}
+                                  >
+                                    {files.slice(0, 3).map((file, i) => {
+                                      const typeInfo = getFileTypeInfo(file.type);
+                                      const FileIcon = typeInfo.icon;
+                                      const offset = i * 8;
+                                      const zIndex = 3 - i;
+                                      return (
+                                        <div
+                                          key={file.id}
+                                          className="absolute rounded-lg border border-border bg-white shadow-sm overflow-hidden transition-transform duration-200"
+                                          style={{
+                                            left: `${offset}px`,
+                                            top: `${offset}px`,
+                                            width: '140px',
+                                            height: '90px',
+                                            zIndex,
+                                            opacity: 1 - i * 0.15,
+                                          }}
+                                        >
+                                          {i === 0 ? (
+                                            <div className="w-full h-full flex flex-col">
+                                              <div className={`flex-1 flex items-center justify-center ${typeInfo.color}`}>
+                                                <FileIcon className="w-6 h-6" />
+                                              </div>
+                                              <div className="px-2 py-1.5 bg-white border-t border-border">
+                                                <p className="text-[10px] text-foreground truncate">{file.name}</p>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <div className={`w-full h-full ${typeInfo.color} opacity-60`} />
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                    {files.length > 1 && (
+                                      <div
+                                        className="absolute bg-primary text-white text-[10px] font-semibold rounded-full w-5 h-5 flex items-center justify-center shadow-sm"
+                                        style={{ left: '128px', top: '0px', zIndex: 10 }}
+                                      >
+                                        {files.length}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {ungrouped.length > 0 && (
+                            <div>
+                              <h3 className="text-[11px] font-medium text-muted-foreground mb-4 uppercase tracking-wider">未关联对话</h3>
+                              <div className={previewFile
+                                ? "grid grid-cols-2 gap-3"
+                                : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                              }>
+                                {ungrouped.map(renderFileGridCard)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    // === Normal time-grouped view ===
+                    Object.entries(groupedAllFiles).map(([dateLabel, filesInGroup]) => (
+                      <div key={dateLabel} className="mb-8 last:mb-0">
+                        <h3 className="text-[11px] font-medium text-muted-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
+                          <Clock className="w-3 h-3 text-muted-foreground/40" />{dateLabel}
+                        </h3>
+                        <div className={previewFile
+                          ? "grid grid-cols-2 gap-3"
+                          : "grid gap-3 grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                        }>
+                          {filesInGroup.map(renderFileGridCard)}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))
+                  )
                 ) : (
                   <div className="flex items-center justify-center h-64">
                     <div className="text-center space-y-3">
@@ -1029,9 +925,6 @@ redis:
                 <div className="w-px h-5 bg-border" />
                 <Button className="bg-primary hover:bg-primary/90 text-white rounded-lg" size="sm" onClick={handleAnalyzeSelected} disabled={selectedFiles.size === 0}>
                   <Plus className="w-3.5 h-3.5 mr-1.5" />创建对话
-                </Button>
-                <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50 rounded-lg" onClick={handleDelete} disabled={selectedFiles.size === 0}>
-                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />删除文件
                 </Button>
                 <button onClick={exitSelectionMode} className="text-[13px] text-muted-foreground hover:text-foreground px-2.5 py-1.5 rounded-lg hover:bg-secondary transition-colors">取消</button>
               </div>
@@ -1064,88 +957,10 @@ redis:
               </button>
             )}
             <div className="flex-1" />
-            <button
-              onClick={() => { setPreviewFile(null); }}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium text-red-500 hover:bg-red-50 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>删除文件</span>
-            </button>
           </div>
         </div>
       )}
 
-      {/* Upload Dialog Overlay */}
-      {showUploadDialog && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => { setShowUploadDialog(false); setIsDraggingOver(false); }}
-        >
-          <div
-            className="w-full max-w-[520px] bg-white rounded-2xl shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-              <h3 className="text-[15px] font-semibold text-foreground">上传文件</h3>
-              <button
-                onClick={() => { setShowUploadDialog(false); setIsDraggingOver(false); }}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Drop Zone */}
-            <div className="px-6 py-6">
-              <div
-                className={`border-2 border-dashed rounded-xl py-12 flex flex-col items-center transition-colors ${
-                  isDraggingOver
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/40'
-                }`}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
-                onDragLeave={() => setIsDraggingOver(false)}
-                onDrop={(e) => { e.preventDefault(); setIsDraggingOver(false); }}
-              >
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                  <Upload className="w-6 h-6 text-primary" />
-                </div>
-                <p className="text-[14px] font-medium text-foreground mb-1">拖放文件到此处</p>
-                <p className="text-[12.5px] text-muted-foreground mb-4">或点击下方按钮选择文件</p>
-                <Button className="bg-primary hover:bg-primary/90 text-white rounded-lg px-6" size="sm">
-                  浏览文件
-                </Button>
-              </div>
-
-              {/* Supported formats */}
-              <div className="mt-4 flex items-center gap-4 justify-center">
-                <div className="flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-red-400" />
-                  <span className="text-[11px] text-muted-foreground">PDF</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <FileType className="w-3.5 h-3.5 text-blue-400" />
-                  <span className="text-[11px] text-muted-foreground">Word</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <FileSpreadsheet className="w-3.5 h-3.5 text-green-400" />
-                  <span className="text-[11px] text-muted-foreground">Excel</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Presentation className="w-3.5 h-3.5 text-orange-400" />
-                  <span className="text-[11px] text-muted-foreground">PPT</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Image className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="text-[11px] text-muted-foreground">图片</span>
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground/60 text-center mt-2">单个文件最大 50MB</p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

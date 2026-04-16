@@ -12,7 +12,8 @@ import { DocumentPreview } from '@/app/components/DocumentPreview';
 import type { DocumentAnnotation } from '@/app/components/DocumentPreview';
 import { FilePreviewPanel } from '@/app/components/FilePreviewPanel';
 import type { PreviewFile } from '@/app/components/FilePreviewPanel';
-import { FolderOpen, X } from 'lucide-react';
+import { ConversationFileList } from '@/app/components/ConversationFileList';
+import { FolderOpen, X, FileText, FileSpreadsheet, ShieldCheck, BookOpen, PanelRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Conversation {
@@ -846,6 +847,7 @@ export default function App() {
   const [parsingState, setParsingState] = useState<ParsingState | null>(null);
   const [filePreviewPanel, setFilePreviewPanel] = useState<{ files: PreviewFile[]; activeFileId: string } | null>(null);
   const [welcomeKey, setWelcomeKey] = useState(0);
+  const [showConversationFiles, setShowConversationFiles] = useState(false);
   const inputAreaRef = useRef<InputAreaRef>(null);
 
   const activeConversation = conversations.find((c) => c.id === activeConversationId);
@@ -860,6 +862,7 @@ export default function App() {
     setDocumentChatMode(null);
     // 关闭文件预览面板
     setFilePreviewPanel(null);
+    setShowConversationFiles(false);
     setParsingState(null);
     // 退出文件管理器
     setShowFileManager(false);
@@ -881,6 +884,7 @@ export default function App() {
     setDocumentChatMode(null);
     // 关闭文件预览面板
     setFilePreviewPanel(null);
+    setShowConversationFiles(false);
     setParsingState(null);
   };
 
@@ -1427,7 +1431,7 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="flex-1 flex flex-col items-center justify-center bg-white"
+            className="flex-1 flex flex-col items-center justify-start pt-[12vh] bg-white overflow-y-auto"
           >
             <div className="w-full max-w-[960px] flex flex-col items-center px-8">
               {/* Greeting */}
@@ -1457,6 +1461,36 @@ export default function App() {
                 }}
               />
               </div>
+
+              {/* Case Study Cards */}
+              <div className="w-full mt-8">
+                <p className="text-[11.5px] text-muted-foreground/50 text-center mb-3 tracking-wide">应用案例</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { title: '合同条款提取与对比', subtitle: '自动识别合同关键条款，多版本差异对比', gradient: 'from-blue-400/80 to-cyan-300/60', icon: FileText },
+                    { title: '财务报表数据审核', subtitle: '关键财务指标校验与异常值检测', gradient: 'from-emerald-400/80 to-teal-300/60', icon: FileSpreadsheet },
+                    { title: '政策文件合规审查', subtitle: '对标法规条文，自动识别合规风险', gradient: 'from-violet-400/80 to-purple-300/60', icon: ShieldCheck },
+                    { title: '产品说明书摘要', subtitle: '多语言文档快速摘要与要点提取', gradient: 'from-amber-400/80 to-orange-300/60', icon: BookOpen },
+                  ].map((cs) => {
+                    const CsIcon = cs.icon;
+                    return (
+                      <div
+                        key={cs.title}
+                        className="group rounded-xl border border-border bg-white hover:border-primary/25 hover:shadow-sm transition-all duration-200 overflow-hidden cursor-pointer"
+                        onClick={() => inputAreaRef.current?.setInputMessage(`请帮我进行${cs.title}`)}
+                      >
+                        <div className={`h-[72px] bg-gradient-to-br ${cs.gradient} flex items-center justify-center`}>
+                          <CsIcon className="w-7 h-7 text-white/80" />
+                        </div>
+                        <div className="px-3 py-2.5">
+                          <p className="text-[12.5px] font-medium text-foreground group-hover:text-primary transition-colors">{cs.title}</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{cs.subtitle}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </motion.div>
           </AnimatePresence>
@@ -1464,10 +1498,23 @@ export default function App() {
           <>
             {/* Conversation Title + gradient fade */}
             <div className={`${filePreviewPanel ? 'px-4 pt-4' : 'px-6 pt-5'} flex-shrink-0 relative`}>
-              <div className={`${filePreviewPanel ? 'max-w-none' : 'max-w-[880px]'} mx-auto pb-3`}>
-                <h1 className={`${filePreviewPanel ? 'text-[15px]' : 'text-[18px]'} font-semibold text-foreground tracking-tight`} style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>
+              <div className={`${filePreviewPanel ? 'max-w-none' : 'max-w-[880px]'} mx-auto pb-3 flex items-center gap-2`}>
+                <h1 className={`${filePreviewPanel ? 'text-[15px]' : 'text-[18px]'} font-semibold text-foreground tracking-tight flex-1`} style={{ fontFamily: "'Noto Serif SC', 'Georgia', serif" }}>
                   {activeConversation?.title || '对话'}
                 </h1>
+                {filePreviewPanel && filePreviewPanel.files.length > 0 && (
+                  <button
+                    onClick={() => setShowConversationFiles(prev => !prev)}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                      showConversationFiles
+                        ? 'text-primary bg-primary/10'
+                        : 'text-stone-400 hover:text-stone-600 hover:bg-stone-100'
+                    }`}
+                    title={showConversationFiles ? '收起文件列表' : '显示文件列表'}
+                  >
+                    <PanelRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
               <div className="absolute bottom-0 left-0 right-0 h-px bg-primary/12 pointer-events-none" />
               <div className="absolute bottom-[-4px] left-0 right-0 h-[4px] bg-gradient-to-b from-black/[0.03] to-transparent pointer-events-none" />
@@ -1497,6 +1544,18 @@ export default function App() {
           </>
         )}
           </div>
+
+          {/* Conversation File List - between chat and preview */}
+          {filePreviewPanel && showConversationFiles && (
+            <div className="w-[208px] flex-shrink-0 border-l border-border">
+              <ConversationFileList
+                files={filePreviewPanel.files}
+                activeFileId={filePreviewPanel.activeFileId}
+                onSelectFile={(id) => setFilePreviewPanel(prev => prev ? { ...prev, activeFileId: id } : null)}
+                onClose={() => setShowConversationFiles(false)}
+              />
+            </div>
+          )}
 
           {/* File Preview Panel - right side when active */}
           {filePreviewPanel && (

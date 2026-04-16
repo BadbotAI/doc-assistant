@@ -122,9 +122,9 @@ export const InputArea = forwardRef<InputAreaRef, InputAreaProps>(
       setTimeout(() => textareaRef.current?.focus(), 0);
     };
 
-    // 计算预设查询：所有附件就绪且用户未输入内容时显示
+    // 计算预设查询：所有附件就绪时显示（输入内容时仍保持可见）
     const allReady = pendingAttachments.length > 0 && pendingAttachments.every(a => a.status === 'ready');
-    const showPresetQueries = allReady && !message.trim();
+    const showPresetQueries = allReady;
     const presetQueries = useMemo(() => {
       if (!allReady) return [];
       return getFileTypePresetQueries(pendingAttachments);
